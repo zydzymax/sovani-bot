@@ -18,6 +18,44 @@ from api_chunking import ChunkedAPIManager
 
 logger = logging.getLogger(__name__)
 
+
+def is_date_in_range(record_date_str: str, date_from: str, date_to: str) -> bool:
+    """
+    Проверка даты записи на вхождение в диапазон
+
+    КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ (30.09.2025):
+    Использует datetime объекты вместо строкового сравнения для корректной
+    фильтрации дат с учетом различных форматов API.
+
+    Args:
+        record_date_str: Дата из записи API (может быть ISO формат с временем)
+        date_from: Начальная дата диапазона (YYYY-MM-DD)
+        date_to: Конечная дата диапазона (YYYY-MM-DD)
+
+    Returns:
+        True если дата в диапазоне, False если нет или ошибка парсинга
+    """
+    try:
+        # Парсим дату записи (убираем время если есть)
+        if 'T' in record_date_str:
+            # ISO формат с временем: 2025-01-15T12:34:56Z
+            record_date = datetime.fromisoformat(record_date_str.split('T')[0])
+        else:
+            # Простой формат: 2025-01-15
+            record_date = datetime.fromisoformat(record_date_str[:10])
+
+        # Парсим границы диапазона
+        start_date = datetime.fromisoformat(date_from)
+        end_date = datetime.fromisoformat(date_to)
+
+        # Проверяем вхождение
+        return start_date <= record_date <= end_date
+
+    except (ValueError, IndexError, AttributeError) as e:
+        logger.warning(f"⚠️ Не удалось распарсить дату '{record_date_str}': {e}")
+        return False
+
+
 class RealDataFinancialReports:
     """100% РЕАЛЬНЫЕ финансовые отчеты на основе API данных"""
 
@@ -121,19 +159,17 @@ class RealDataFinancialReports:
             }
 
             for record in main_data:
-                # КРИТИЧНО: ВОССТАНОВЛЕНА ПРАВИЛЬНАЯ ФИЛЬТРАЦИЯ ДАТ
-                # API может возвращать данные за соседние периоды - нужна обязательная фильтрация
-                # Это НЕ приводит к потере данных, это ИСКЛЮЧАЕТ лишние данные!
+                # КРИТИЧНО: ОБЯЗАТЕЛЬНАЯ ФИЛЬТРАЦИЯ ДАТ (ИСПРАВЛЕНО 30.09.2025)
+                # API может возвращать данные за соседние периоды - нужна строгая фильтрация
+                # Используем datetime объекты вместо строкового сравнения
 
-                # Правильный парсинг даты с учетом формата WB API
                 record_date_str = record.get('date', '')
-                if 'T' in record_date_str:
-                    record_date = record_date_str.split('T')[0]
-                else:
-                    record_date = record_date_str[:10]
+                if not record_date_str:
+                    logger.warning(f"⚠️ Запись без даты: {record}")
+                    continue
 
-                # ВОССТАНОВЛЕНА ОБЯЗАТЕЛЬНАЯ ФИЛЬТРАЦИЯ ПО ДАТАМ
-                if record_date and not (date_from <= record_date <= date_to):
+                # Проверяем дату через улучшенную функцию
+                if not is_date_in_range(record_date_str, date_from, date_to):
                     continue
 
                 if data_source == "orders":
