@@ -140,14 +140,21 @@ class RealDataFinancialReports:
             advertising_data = {}
             sales_advertising_costs = 0  # Инициализируем переменную
 
-            # Детальный анализ WB продаж (ИСПРАВЛЕННАЯ структура)
-            total_revenue = 0  # priceWithDisc - цена после скидки продавца (ОСНОВА расчета)
-            final_revenue = 0  # forPay - финальная выручка к перечислению
-            total_units = 0
-            total_commission = 0  # Базовая комиссия WB (24% от priceWithDisc)
-            actual_orders_value = 0  # Реальная сумма заказов = priceWithDisc (без СПП)
-            spp_compensation = 0  # СПП компенсация (priceWithDisc - finishedPrice)
-            wb_logistics_costs = 0  # Дополнительные сборы WB (логистика, хранение и пр.)
+            # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ #3 (30.09.2025): Унифицированная структура метрик
+            # Четкое разделение финансовых полей WB для устранения путаницы
+
+            # ОСНОВНЫЕ МЕТРИКИ (что реально получит продавец)
+            net_revenue_to_seller = 0  # forPay - чистая выручка к перечислению продавцу
+            total_units = 0            # Количество проданных единиц
+
+            # ДОПОЛНИТЕЛЬНЫЕ МЕТРИКИ (для аналитики)
+            gross_sales_value = 0      # priceWithDisc - валовая стоимость продаж (до удержаний WB)
+            wb_total_deductions = 0    # Все удержания WB = priceWithDisc - forPay
+            wb_commission = 0          # Комиссия WB (~80% от удержаний)
+            wb_logistics_costs = 0     # Логистика, хранение (~20% от удержаний)
+            spp_compensation = 0       # СПП компенсация (не является расходом)
+
+            # СЧЕТЧИКИ
             delivered_count = 0
             returned_count = 0
 
@@ -195,34 +202,41 @@ class RealDataFinancialReports:
                     finished_price = price_with_disc  # Нет данных о СПП в Orders API
 
                 if is_realization:
-                    # Это реализованная продажа
-                    total_revenue += for_pay  # ИСПРАВЛЕНО: Используем forPay - реальную сумму к перечислению
-                    final_revenue += for_pay  # Финальная к перечислению (дублируем для совместимости)
-                    total_units += 1  # Каждая запись = 1 единица товара
-                    actual_orders_value += price_with_disc  # Реальная сумма заказов (для Orders API)
+                    # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ #3: Четкое разделение метрик
+                    # Используем правильные поля без смешивания
+
+                    # 1. ЧИСТАЯ ВЫРУЧКА К ПРОДАВЦУ
+                    net_revenue_to_seller += for_pay
+
+                    # 2. ВАЛОВАЯ СТОИМОСТЬ ПРОДАЖ (для аналитики)
+                    gross_sales_value += price_with_disc
+
+                    # 3. ЕДИНИЦЫ
+                    total_units += 1
                     delivered_count += 1
 
-                    # РЕАЛЬНАЯ комиссия WB из API (вознаграждение Вайлдберриз)
-                    # Общие удержания WB = priceWithDisc - forPay
-                    total_wb_deductions = price_with_disc - for_pay
+                    # 4. УДЕРЖАНИЯ WB
+                    deduction_amount = price_with_disc - for_pay
+                    wb_total_deductions += deduction_amount
 
-                    # Детализация согласно отчету поставщика:
-                    # 1. Основная комиссия WB + эквайринг (~80-85% от общих удержаний)
-                    wb_commission_main = total_wb_deductions * 0.82  # Основная часть
-                    total_commission += wb_commission_main
+                    # 5. ДЕТАЛИЗАЦИЯ УДЕРЖАНИЙ
+                    # Основная комиссия WB (~82% от удержаний)
+                    commission_amount = deduction_amount * 0.82
+                    wb_commission += commission_amount
 
-                    # 2. Логистика, хранение и прочие услуги (~15-20% от общих удержаний)
-                    wb_logistics_other = total_wb_deductions * 0.18  # Логистика и прочее
-                    wb_logistics_costs += wb_logistics_other
+                    # Логистика и хранение (~18% от удержаний)
+                    logistics_amount = deduction_amount * 0.18
+                    wb_logistics_costs += logistics_amount
 
-                    # 3. СПП компенсация (не является расходом, так как компенсируется)
-                    spp_comp = price_with_disc - finished_price if price_with_disc > finished_price else 0
-                    spp_compensation += spp_comp
+                    # 6. СПП КОМПЕНСАЦИЯ (отдельно, не является расходом)
+                    if finished_price > 0:
+                        spp_comp = price_with_disc - finished_price if price_with_disc > finished_price else 0
+                        spp_compensation += spp_comp
 
-                    # Группируем для отчетности
+                    # 7. ГРУППИРОВКА ДЛЯ ОТЧЕТНОСТИ
                     operation_breakdown['sales']['count'] += 1
-                    operation_breakdown['sales']['revenue'] += for_pay  # ИСПРАВЛЕНО: Используем forPay для консистентности
-                    operation_breakdown['sales']['commission'] += wb_commission_main
+                    operation_breakdown['sales']['revenue'] += for_pay  # Чистая выручка
+                    operation_breakdown['sales']['commission'] += commission_amount
 
                 elif not is_realization and is_supply:
                     # Это возврат или отмена
@@ -232,30 +246,34 @@ class RealDataFinancialReports:
                     operation_breakdown['returns']['count'] += 1
                     operation_breakdown['returns']['amount'] += return_amount
 
-            # Логистические удержания рассчитаны выше
+            # ФИНАЛЬНЫЕ РАСЧЕТЫ (ИСПРАВЛЕНО #3)
             operation_breakdown['logistics']['count'] = delivered_count
             operation_breakdown['logistics']['amount'] = wb_logistics_costs
 
-            # Вычисляем процент доставки (выкупа) - от finishedPrice к forPay
-            buyout_rate = 0
-            if total_revenue > 0:
-                buyout_rate = (final_revenue / total_revenue) * 100
+            # Процент удержаний WB от валовой стоимости
+            wb_deduction_percent = 0
+            if gross_sales_value > 0:
+                wb_deduction_percent = (wb_total_deductions / gross_sales_value) * 100
 
             # COGS рассчитывается от реального шаблона себестоимости
             total_cogs = await self._calculate_real_cogs_wb(sales_data, date_from, date_to)
 
-            # Финальная прибыль (от основной выручки - все расходы)
-            net_profit = total_revenue - total_cogs - total_commission - wb_logistics_costs
+            # ЧИСТАЯ ПРИБЫЛЬ = Выручка к продавцу - Себестоимость
+            # (Комиссия и логистика уже вычтены в forPay)
+            net_profit = net_revenue_to_seller - total_cogs
 
-            logger.info(f"WB детальный анализ: {len(sales_data)} записей")
-            logger.info(f"  Выручка (после скидки продавца): {total_revenue:,.2f} ₽ ({total_units} ед.)")
-            if total_revenue > 0:
-                logger.info(f"  Комиссия WB + эквайринг: {total_commission:,.2f} ₽ ({(total_commission/total_revenue*100):.1f}%)")
-                logger.info(f"  Логистика и хранение: {wb_logistics_costs:,.2f} ₽ ({(wb_logistics_costs/total_revenue*100):.1f}%)")
-            else:
-                logger.info(f"  Комиссия WB + эквайринг: {total_commission:,.2f} ₽ (0.0%)")
-                logger.info(f"  Логистика и хранение: {wb_logistics_costs:,.2f} ₽ (0.0%)")
-            logger.info(f"  К перечислению: {final_revenue:,.2f} ₽ ({delivered_count} операций)")
+            # ЛОГИРОВАНИЕ (улучшенное)
+            logger.info(f"")
+            logger.info(f"📊 WB ДЕТАЛЬНЫЙ АНАЛИЗ ({len(sales_data)} записей):")
+            logger.info(f"  💰 Валовая стоимость продаж: {gross_sales_value:,.2f} ₽")
+            logger.info(f"  📉 Удержания WB: {wb_total_deductions:,.2f} ₽ ({wb_deduction_percent:.1f}%)")
+            logger.info(f"     ├─ Комиссия WB: {wb_commission:,.2f} ₽ ({wb_commission/gross_sales_value*100:.1f}%)" if gross_sales_value > 0 else f"     ├─ Комиссия WB: {wb_commission:,.2f} ₽")
+            logger.info(f"     └─ Логистика: {wb_logistics_costs:,.2f} ₽ ({wb_logistics_costs/gross_sales_value*100:.1f}%)" if gross_sales_value > 0 else f"     └─ Логистика: {wb_logistics_costs:,.2f} ₽")
+            logger.info(f"  ✅ К перечислению продавцу: {net_revenue_to_seller:,.2f} ₽")
+            logger.info(f"  📦 Единиц продано: {total_units}")
+            logger.info(f"  💵 Себестоимость: {total_cogs:,.2f} ₽")
+            logger.info(f"  💎 ЧИСТАЯ ПРИБЫЛЬ: {net_profit:,.2f} ₽")
+            logger.info(f"")
 
             # Получаем информацию о рекламных кампаниях WB (доступные данные)
             try:
@@ -290,14 +308,14 @@ class RealDataFinancialReports:
             logger.info(f"  Возвратов: {returned_count}")
             logger.info(f"  Чистая прибыль: {(net_profit - wb_advertising_costs):,.2f} ₽")
 
-            # ДИАГНОСТИКА ИТОГОВЫХ РАСЧЕТОВ
+            # ДИАГНОСТИКА ИТОГОВЫХ РАСЧЕТОВ (ОБНОВЛЕНО #3)
             logger.info(f"=== ИТОГОВЫЕ РАСЧЕТЫ WB ===")
             logger.info(f"Основной источник: {data_source}")
-            logger.info(f"total_revenue (priceWithDisc): {total_revenue:,.0f}")
-            logger.info(f"final_revenue (forPay): {final_revenue:,.0f}")
-            logger.info(f"actual_orders_value: {actual_orders_value:,.0f}")
-            logger.info(f"delivered_count: {delivered_count}")
-            logger.info(f"ВНИМАНИЕ: В отчете будет использоваться total_revenue = {total_revenue:,.0f}")
+            logger.info(f"💰 Валовая стоимость продаж (priceWithDisc): {gross_sales_value:,.0f} ₽")
+            logger.info(f"✅ Чистая выручка к продавцу (forPay): {net_revenue_to_seller:,.0f} ₽")
+            logger.info(f"📉 Удержания WB: {wb_total_deductions:,.0f} ₽")
+            logger.info(f"📦 Единиц продано: {total_units}")
+            logger.info(f"ВНИМАНИЕ: В отчете используется net_revenue_to_seller (forPay)")
             logger.info(f"=== КОНЕЦ ИТОГОВЫХ РАСЧЕТОВ ===")
 
             # Подготавливаем данные по заказам и выкупам
@@ -318,38 +336,49 @@ class RealDataFinancialReports:
             if orders_stats["count"] > 0:
                 buyout_rate = (sales_stats["count"] / orders_stats["count"]) * 100
 
+            # КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ #3: Унифицированный return с четкими метриками
             return {
-                "revenue": total_revenue,  # Выручка (priceWithDisc) - ОСНОВА расчета
-                "final_revenue": final_revenue,  # К перечислению (forPay)
-                "units": delivered_count,  # Количество доставленных товаров
-                "orders_revenue": actual_orders_value,  # Реальная сумма заказов (priceWithDisc)
-                "orders_units": total_units,  # Общее количество заказанных единиц
-                "commission": total_commission,  # Основная комиссия WB (82% от удержаний)
-                "additional_fees": wb_logistics_costs,  # Логистика и прочие сборы (18% от удержаний)
-                "advertising_costs": wb_advertising_costs,  # Расходы на рекламу WB
-                "spp_compensation": spp_compensation,  # СПП компенсация
-                "logistics_costs": wb_logistics_costs,  # Alias для совместимости
-                "returns_count": returned_count,  # Количество возвратов
+                # ОСНОВНЫЕ МЕТРИКИ (что реально важно для бизнеса)
+                "revenue": net_revenue_to_seller,  # ✅ ИСПРАВЛЕНО: чистая выручка к продавцу (forPay)
+                "units": total_units,              # Количество проданных единиц
+                "cogs": total_cogs,                # Себестоимость
+                "commission": wb_commission,       # Комиссия WB
+                "profit": net_profit - wb_advertising_costs,  # Чистая прибыль с учетом рекламы
 
-                # НОВЫЕ ПОЛЯ: детальная статистика заказов и выкупов
-                "orders_stats": orders_stats,  # Подробная статистика заказов
-                "sales_stats": sales_stats,    # Подробная статистика продаж
-                "buyout_rate": buyout_rate,    # Процент выкупа
-                "data_source": data_source,    # Источник основного расчета (orders/sales)
-                "buyout_rate": buyout_rate,  # Процент "выживаемости" после комиссий
+                # ДОПОЛНИТЕЛЬНЫЕ ФИНАНСОВЫЕ МЕТРИКИ
+                "gross_sales_value": gross_sales_value,       # Валовая стоимость продаж (priceWithDisc)
+                "net_revenue_to_seller": net_revenue_to_seller,  # Alias для ясности
+                "wb_total_deductions": wb_total_deductions,   # Все удержания WB
+                "wb_logistics_costs": wb_logistics_costs,     # Логистика и хранение
+                "spp_compensation": spp_compensation,         # СПП компенсация
+                "advertising_costs": wb_advertising_costs,    # Расходы на рекламу WB
+
+                # LEGACY ПОЛЯ (для обратной совместимости)
+                "final_revenue": net_revenue_to_seller,  # Alias
+                "logistics_costs": wb_logistics_costs,   # Alias
+                "additional_fees": wb_logistics_costs,   # Alias
+
+                # СТАТИСТИКА ЗАКАЗОВ И ПРОДАЖ
+                "orders_stats": orders_stats,        # Подробная статистика заказов
+                "sales_stats": sales_stats,          # Подробная статистика продаж
+                "buyout_rate": buyout_rate,          # Процент выкупа
+                "delivered_count": delivered_count,  # Количество доставленных
+                "returned_count": returned_count,    # Количество возвратов
+
+                # МЕТАДАННЫЕ
+                "data_source": data_source,          # Источник расчета (orders/sales)
                 "operation_breakdown": operation_breakdown,  # Детальный разбор операций
-                "advertising_breakdown": advertising_data,  # Детальный разбор рекламы
-                "campaigns_info": {  # НОВОЕ: информация о рекламных кампаниях
+                "advertising_breakdown": advertising_data,   # Детальный разбор рекламы
+                "campaigns_info": {
                     "total_campaigns": campaign_count,
                     "active_campaigns": active_campaigns,
                     "campaigns_data": campaigns_data
                 },
-                "cogs": total_cogs,
-                "profit": net_profit - wb_advertising_costs,  # Прибыль с учетом рекламы
-                "sales_data": sales_data,
+
                 # RAW DATA для staged_processor
-                "orders": orders_data or [],  # Массив заказов для staged_processor
-                "sales": sales_data or []     # Массив продаж для staged_processor
+                "orders": orders_data or [],  # Массив заказов
+                "sales": sales_data or [],    # Массив продаж
+                "sales_data": sales_data      # Legacy alias
             }
 
         except Exception as e:
