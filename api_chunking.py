@@ -117,21 +117,97 @@ class APIChunker:
 
     @staticmethod
     def aggregate_wb_sales_data(chunked_results: List[Any]) -> List[Dict]:
-        """Агрегация результатов WB Sales API"""
-        all_sales = []
+        """
+        Агрегация результатов WB Sales API с дедупликацией
+
+        КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ (30.09.2025):
+        Добавлена дедупликация по saleID для устранения многократного учета
+        одних и тех же продаж при агрегации чанков.
+
+        ПРОБЛЕМА: API может возвращать одну продажу в нескольких чанках,
+        что приводило к завышению данных в 5-10 раз.
+        """
+        seen_sale_ids = set()
+        unique_sales = []
+        total_records = 0
+        duplicates_removed = 0
+
         for result in chunked_results:
             if result and isinstance(result, list):
-                all_sales.extend(result)
-        return all_sales
+                total_records += len(result)
+                for sale in result:
+                    sale_id = sale.get('saleID')
+
+                    if sale_id:
+                        # Проверяем, видели ли мы эту продажу раньше
+                        if sale_id not in seen_sale_ids:
+                            seen_sale_ids.add(sale_id)
+                            unique_sales.append(sale)
+                        else:
+                            duplicates_removed += 1
+                    else:
+                        # Если нет saleID, добавляем запись (но это подозрительно)
+                        unique_sales.append(sale)
+                        logger.warning(f"⚠️ WB Sale без saleID: {sale}")
+
+        if duplicates_removed > 0:
+            logger.warning(
+                f"🔍 Дедупликация WB Sales: {total_records} записей → "
+                f"{len(unique_sales)} уникальных (удалено {duplicates_removed} дубликатов, "
+                f"{duplicates_removed/total_records*100:.1f}%)"
+            )
+        else:
+            logger.info(f"✅ WB Sales: {len(unique_sales)} уникальных записей, дубликатов не найдено")
+
+        return unique_sales
 
     @staticmethod
     def aggregate_wb_orders_data(chunked_results: List[Any]) -> List[Dict]:
-        """Агрегация результатов WB Orders API"""
-        all_orders = []
+        """
+        Агрегация результатов WB Orders API с дедупликацией
+
+        КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ (30.09.2025):
+        Добавлена дедупликация по составному ключу для устранения
+        многократного учета одних и тех же заказов.
+
+        ПРОБЛЕМА: Orders API может возвращать один заказ в нескольких чанках.
+        У Orders нет уникального ID, поэтому используем составной ключ:
+        date + nmId + odid + priceWithDisc
+        """
+        seen_order_keys = set()
+        unique_orders = []
+        total_records = 0
+        duplicates_removed = 0
+
         for result in chunked_results:
             if result and isinstance(result, list):
-                all_orders.extend(result)
-        return all_orders
+                total_records += len(result)
+                for order in result:
+                    # Создаем составной ключ для уникальности
+                    order_date = order.get('date', '')
+                    nm_id = order.get('nmId', '')
+                    od_id = order.get('odid', '')
+                    price = order.get('priceWithDisc', 0)
+
+                    # Формируем уникальный ключ
+                    order_key = f"{order_date}_{nm_id}_{od_id}_{price}"
+
+                    if order_key not in seen_order_keys:
+                        seen_order_keys.add(order_key)
+                        unique_orders.append(order)
+                    else:
+                        duplicates_removed += 1
+
+        if duplicates_removed > 0:
+            logger.warning(
+                f"🔍 Дедупликация WB Orders: {total_records} записей → "
+                f"{len(unique_orders)} уникальных (удалено {duplicates_removed} дубликатов, "
+                f"{duplicates_removed/total_records*100:.1f}%)"
+            )
+        else:
+            logger.info(f"✅ WB Orders: {len(unique_orders)} уникальных записей, дубликатов не найдено")
+
+        return unique_orders
 
     @staticmethod
     def aggregate_wb_advertising_data(chunked_results: List[Any]) -> Dict[str, Any]:
@@ -158,16 +234,64 @@ class APIChunker:
 
     @staticmethod
     def aggregate_ozon_data(chunked_results: List[Any]) -> List[Dict]:
-        """Агрегация результатов Ozon API"""
-        all_data = []
+        """
+        Агрегация результатов Ozon API с дедупликацией
+
+        КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ (30.09.2025):
+        Добавлена дедупликация по posting_number (номер отправления) или
+        составному ключу для FBO/FBS схем.
+        """
+        seen_posting_numbers = set()
+        unique_data = []
+        total_records = 0
+        duplicates_removed = 0
+
         for result in chunked_results:
+            records = []
+
             if result and isinstance(result, list):
-                all_data.extend(result)
+                records = result
             elif result and isinstance(result, dict) and "result" in result:
                 # Некоторые Ozon API возвращают данные в поле "result"
                 if isinstance(result["result"], list):
-                    all_data.extend(result["result"])
-        return all_data
+                    records = result["result"]
+
+            total_records += len(records)
+
+            for record in records:
+                # Пробуем использовать posting_number как уникальный ID
+                posting_number = record.get('posting_number') or record.get('postingNumber')
+
+                if posting_number:
+                    if posting_number not in seen_posting_numbers:
+                        seen_posting_numbers.add(posting_number)
+                        unique_data.append(record)
+                    else:
+                        duplicates_removed += 1
+                else:
+                    # Если нет posting_number, создаем составной ключ
+                    order_id = record.get('order_id', '')
+                    order_number = record.get('order_number', '')
+                    created_at = record.get('created_at', '')
+
+                    composite_key = f"{order_id}_{order_number}_{created_at}"
+
+                    if composite_key not in seen_posting_numbers:
+                        seen_posting_numbers.add(composite_key)
+                        unique_data.append(record)
+                    else:
+                        duplicates_removed += 1
+
+        if duplicates_removed > 0:
+            logger.warning(
+                f"🔍 Дедупликация Ozon: {total_records} записей → "
+                f"{len(unique_data)} уникальных (удалено {duplicates_removed} дубликатов, "
+                f"{duplicates_removed/total_records*100:.1f}%)"
+            )
+        else:
+            logger.info(f"✅ Ozon: {len(unique_data)} уникальных записей, дубликатов не найдено")
+
+        return unique_data
 
 class ChunkedAPIManager:
     """Менеджер для управления chunked API запросами"""
