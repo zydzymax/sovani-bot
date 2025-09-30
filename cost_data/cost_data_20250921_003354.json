@@ -1,0 +1,316 @@
+{
+  "sku_costs": {
+    "WB_KP.K-pink": {
+      "platform": "WB",
+      "sku": "KP.K-pink",
+      "name": "Костюмы купальные",
+      "cost_per_unit": 800.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_PM-TOP/cement": {
+      "platform": "WB",
+      "sku": "PM-TOP/cement",
+      "name": "Пижамы",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_PM-TOP/grafit": {
+      "platform": "WB",
+      "sku": "PM-TOP/grafit",
+      "name": "Пижамы",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KP.B-sport_haki": {
+      "platform": "WB",
+      "sku": "KP.B-sport_haki",
+      "name": "Комплекты белья",
+      "cost_per_unit": 50.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KST-BRT/KSST-FNMанго": {
+      "platform": "WB",
+      "sku": "KST-BRT/KSST-FNMанго",
+      "name": "Костюмы спортивные",
+      "cost_per_unit": 1500.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_LONG_OVER_MILK": {
+      "platform": "WB",
+      "sku": "LONG_OVER_MILK",
+      "name": "Лонгсливы",
+      "cost_per_unit": 400.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KP.K-green": {
+      "platform": "WB",
+      "sku": "KP.K-green",
+      "name": "Костюмы купальные",
+      "cost_per_unit": 800.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KP.K-kofta_Black": {
+      "platform": "WB",
+      "sku": "KP.K-kofta_Black",
+      "name": "Костюмы купальные",
+      "cost_per_unit": 800.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KP.K-platie_Black": {
+      "platform": "WB",
+      "sku": "KP.K-platie_Black",
+      "name": "Костюмы купальные",
+      "cost_per_unit": 800.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KP.B-sport_indigo": {
+      "platform": "WB",
+      "sku": "KP.B-sport_indigo",
+      "name": "Комплекты белья",
+      "cost_per_unit": 50.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_PM-TOP/oliva": {
+      "platform": "WB",
+      "sku": "PM-TOP/oliva",
+      "name": "Пижамы",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_PM-TOP/indigo": {
+      "platform": "WB",
+      "sku": "PM-TOP/indigo",
+      "name": "Пижамы",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_PM-LETO/графит": {
+      "platform": "WB",
+      "sku": "PM-LETO/графит",
+      "name": "Пижамы",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KP.K-zebra": {
+      "platform": "WB",
+      "sku": "KP.K-zebra",
+      "name": "Костюмы купальные",
+      "cost_per_unit": 800.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KP.B-sport_black": {
+      "platform": "WB",
+      "sku": "KP.B-sport_black",
+      "name": "Комплекты белья",
+      "cost_per_unit": 50.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KP.B-BEZ_BEJ": {
+      "platform": "WB",
+      "sku": "KP.B-BEZ_BEJ",
+      "name": "Комплекты белья",
+      "cost_per_unit": 250.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_PM-TOP/ecru": {
+      "platform": "WB",
+      "sku": "PM-TOP/ecru",
+      "name": "Пижамы",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_PM-TOP/pink": {
+      "platform": "WB",
+      "sku": "PM-TOP/pink",
+      "name": "Пижамы",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KST-BMIL/KELLЧерный": {
+      "platform": "WB",
+      "sku": "KST-BMIL/KELLЧерный",
+      "name": "Костюмы спортивные",
+      "cost_per_unit": 1500.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "WB_KP.B-BEZ_BLACK": {
+      "platform": "WB",
+      "sku": "KP.B-BEZ_BLACK",
+      "name": "Комплекты белья",
+      "cost_per_unit": 250.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_KP.B-sport_oliva": {
+      "platform": "Ozon",
+      "sku": "KP.B-sport_oliva",
+      "name": "KP.B-sport_oliva M",
+      "cost_per_unit": 50.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/cement-S": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/cement-S",
+      "name": "PM-TOP/cement-S",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/oliva-S": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/oliva-S",
+      "name": "PM-TOP/oliva-S",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/grafit-M": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/grafit-M",
+      "name": "PM-TOP/grafit-M",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/oliva-M": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/oliva-M",
+      "name": "PM-TOP/oliva-M",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/indigo-M": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/indigo-M",
+      "name": "PM-TOP/indigo-M",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/ecru-S": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/ecru-S",
+      "name": "PM-TOP/ecru-S",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/cement-M": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/cement-M",
+      "name": "PM-TOP/cement-M",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/grafit-S": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/grafit-S",
+      "name": "PM-TOP/grafit-S",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/ecru-M": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/ecru-M",
+      "name": "PM-TOP/ecru-M",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/indigo-S": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/indigo-S",
+      "name": "PM-TOP/indigo-S",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_KSN-ГрафитXL": {
+      "platform": "Ozon",
+      "sku": "KSN-ГрафитXL",
+      "name": "KSN-ГрафитXL",
+      "cost_per_unit": 1500.0,
+      "current_stock": 0,
+      "note": NaN
+    },
+    "Ozon_PM-TOP/PINK": {
+      "platform": "Ozon",
+      "sku": "PM-TOP/PINK",
+      "name": "PM-TOP/PINK S",
+      "cost_per_unit": 600.0,
+      "current_stock": 0,
+      "note": NaN
+    }
+  },
+  "variable_costs": {
+    "Упаковка": {
+      "cost_per_unit": 3.0,
+      "description": "Стоимость упаковки одного товара",
+      "is_percentage": false
+    },
+    "Логистика внутри города": {
+      "cost_per_unit": 10.0,
+      "description": "Доставка до склада маркетплейса",
+      "is_percentage": false
+    },
+    "Брак/возвраты %": {
+      "cost_per_unit": 0.01,
+      "description": "Процент брака от общих продаж",
+      "is_percentage": true
+    },
+    "Комиссия эквайринга %": {
+      "cost_per_unit": 4.0,
+      "description": "Комиссия за платежи",
+      "is_percentage": true
+    },
+    "Переработка возвратов": {
+      "cost_per_unit": 20.0,
+      "description": "Стоимость обработки возвращенных товаров",
+      "is_percentage": false
+    }
+  },
+  "fixed_costs": {
+    "Зарплата персонала": {
+      "monthly_cost": 30000.0,
+      "description": "Фонд оплаты труда"
+    },
+    "Программное обеспечение": {
+      "monthly_cost": 5000.0,
+      "description": "Подписки на сервисы, CRM"
+    },
+    "Маркетинг и реклама": {
+      "monthly_cost": 60000.0,
+      "description": "Контекстная реклама, SMM"
+    }
+  },
+  "summary": {
+    "total_sku_with_costs": 33,
+    "total_variable_costs": 5,
+    "total_fixed_costs": 3,
+    "total_fixed_monthly": 95000.0,
+    "processed_at": "2025-09-21T00:33:54.671734"
+  }
+}

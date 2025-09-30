@@ -1,0 +1,80 @@
+{
+  "exp_1758987658347": {
+    "id": "exp_1758987658347",
+    "name": "Комиссия WB",
+    "expense_type": "commission",
+    "calculation_type": "percent_revenue",
+    "amount": 15.0,
+    "platform": "wb",
+    "category": "marketplace_fees",
+    "description": "Стандартная комиссия Wildberries",
+    "is_active": true,
+    "created_at": "2025-09-27T18:40:58.348009",
+    "updated_at": "2025-09-27T20:01:21.207899"
+  },
+  "exp_1758987658348": {
+    "id": "exp_1758987658348",
+    "name": "Логистика за единицу",
+    "expense_type": "logistics",
+    "calculation_type": "per_unit",
+    "amount": 150.0,
+    "platform": "both",
+    "category": "logistics",
+    "description": "Средняя стоимость логистики за единицу товара",
+    "is_active": true,
+    "created_at": "2025-09-27T18:40:58.348781",
+    "updated_at": "2025-09-27T20:01:21.207958"
+  },
+  "exp_1758987658352": {
+    "id": "exp_1758987658352",
+    "name": "Аренда склада",
+    "expense_type": "fixed",
+    "calculation_type": "fixed_amount",
+    "amount": 50000.0,
+    "platform": null,
+    "category": "fixed_costs",
+    "description": "Месячная аренда складского помещения",
+    "is_active": true,
+    "created_at": "2025-09-27T18:40:58.352090",
+    "updated_at": "2025-09-27T20:01:21.207974"
+  },
+  "exp_1758987665600": {
+    "id": "exp_1758987665600",
+    "name": "Комиссия Ozon",
+    "expense_type": "commission",
+    "calculation_type": "percent_revenue",
+    "amount": 12.0,
+    "platform": "ozon",
+    "category": "marketplace_fees",
+    "description": "Стандартная комиссия Ozon",
+    "is_active": true,
+    "created_at": "2025-09-27T18:41:05.600661",
+    "updated_at": "2025-09-27T20:01:21.207992"
+  },
+  "exp_1758991541612": {
+    "id": "exp_1758991541612",
+    "name": "Реклама Ozon (ручной ввод)",
+    "expense_type": "advertising",
+    "calculation_type": "fixed_amount",
+    "amount": 18000.0,
+    "platform": "ozon",
+    "category": "advertising",
+    "description": "Реклама Ozon за тестовый период",
+    "is_active": true,
+    "created_at": "2025-09-27T19:45:41.612915",
+    "updated_at": "2025-09-27T20:01:21.764651"
+  },
+  "exp_1758991593357": {
+    "id": "exp_1758991593357",
+    "name": "Реклама WB (ручной ввод)",
+    "expense_type": "advertising",
+    "calculation_type": "fixed_amount",
+    "amount": 35000.0,
+    "platform": "wb",
+    "category": "advertising",
+    "description": "Реклама WB за тестовый период",
+    "is_active": true,
+    "created_at": "2025-09-27T19:46:33.357461",
+    "updated_at": "2025-09-27T20:01:21.763765"
+  }
+}

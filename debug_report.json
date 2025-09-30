@@ -1,0 +1,49 @@
+{
+  "issues_found": [
+    "❌ API подключения не работают корректно",
+    "❌ wb_sales API не возвращает данные",
+    "❌ wb_orders API не возвращает данные",
+    "❌ ozon_fbo API не возвращает данные"
+  ],
+  "recommendations": [
+    "Проверить токены и доступность API",
+    "Исправить wb_sales API интеграцию",
+    "Исправить wb_orders API интеграцию",
+    "Исправить ozon_fbo API интеграцию"
+  ],
+  "debug_data": {
+    "api_calls": [],
+    "chunk_results": [],
+    "aggregation_steps": [],
+    "final_results": {},
+    "api_status": {
+      "wb_campaigns_count": 0,
+      "api_connections_ok": false,
+      "error": "'OzonAPI' object has no attribute 'CLIENT_ID'"
+    },
+    "chunking_analysis": {
+      "error": "'APIChunker' object has no attribute 'split_date_range'"
+    },
+    "direct_api_results": {
+      "wb_sales": {
+        "success": false,
+        "error": "No module named 'api_clients.wb.sales_client'"
+      },
+      "wb_orders": {
+        "success": false,
+        "error": "No module named 'api_clients.wb.orders_client'"
+      },
+      "ozon_fbo": {
+        "success": false,
+        "error": "cannot import name 'OzonSalesAPI' from 'api_clients.ozon.sales_client' (/root/sovani_bot/api_clients/ozon/sales_client.py)"
+      }
+    },
+    "staged_results": {
+      "processor_available": true,
+      "job_id": "debug_233408",
+      "period": "2025-01-01 -> 2025-09-24",
+      "note": "Полный запуск не выполнялся для избежания длительного ожидания"
+    }
+  },
+  "root_cause_identified": true
+}

@@ -1,0 +1,26 @@
+import os, requests
+API_BASE = os.getenv("API_BASE","https://justbusiness.lol/api").rstrip("/")
+SERVICE_TOKEN = os.getenv("INTERNAL_API_TOKEN","")
+
+def _get(path, params=None):
+    h={}
+    if SERVICE_TOKEN: h["X-Service-Token"]=SERVICE_TOKEN
+    r = requests.get(API_BASE+path, params=params or {}, headers=h, timeout=20)
+    r.raise_for_status()
+    return r.json()
+
+def finance(date_from, date_to):
+    st = _get("/diag/finance_status", {"date_from":date_from,"date_to":date_to})
+    return st
+
+def inventory():
+    st = _get("/diag/inventory_status")
+    return st
+
+def ads(date_from, date_to):
+    st = _get("/diag/ads_status")
+    return st
+
+def reviews():
+    st = _get("/diag/reviews_status")
+    return st

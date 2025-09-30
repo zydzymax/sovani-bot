@@ -1,0 +1,38 @@
+[Unit]
+Description=SoVAni Telegram Bot - автоматизация работы с Wildberries и Ozon
+Documentation=https://github.com/your-repo/sovani-bot
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/sovani_bot
+ExecStart=/usr/bin/python3 /root/sovani_bot/bot.py
+Restart=always
+RestartSec=10
+TimeoutSec=60
+
+# Переменные окружения
+Environment="PYTHONUNBUFFERED=1"
+Environment="PYTHONPATH=/root/sovani_bot"
+
+# Безопасность
+PrivateNetwork=false
+NoNewPrivileges=false
+
+# Ресурсы
+MemoryMax=512M
+CPUQuota=50%
+
+# Логирование
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sovani-bot
+
+# Автоматический перезапуск при изменении файлов службы
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target
