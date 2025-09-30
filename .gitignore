@@ -77,17 +77,62 @@ uploads/
 excel_reports/
 processed_costs/
 
-# Test files
+# Test files (excluding validation_test_suite.py which is part of project)
 test_*.py
 *_test.py
+!validation_test_suite.py
+
+# Test artifacts and validation results
+validation_*.json
+validation_*.log
 
 # Backup files
 *.bak
 *.backup
 *.old
+*.bak_*
 
 # Secrets (double protection)
 *token*
 *secret*
 *password*
 config_local.py
+
+# pytest cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# mypy cache
+.mypy_cache/
+.dmypy.json
+dmypy.json
+
+# ruff cache
+.ruff_cache/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# pyenv
+.python-version
+
+# Celery
+celerybeat-schedule
+celerybeat.pid
+
+# FastAPI / uvicorn
+*.pid
+
+# Private keys
+*.pem
+*.key
+!*.pub
+
+# Archives (unless explicitly needed)
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.7z
+*.rar
