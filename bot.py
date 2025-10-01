@@ -46,7 +46,10 @@ from api_clients_main import (
 )
 from api_monitor import api_monitor
 from auto_reviews_processor import auto_processor
-from config import Config
+
+# NEW: pydantic-settings based configuration with validation
+from app.core.config import config as Config, get_settings
+
 from cost_template_generator import CostTemplateGenerator
 from db import (
     get_question,
@@ -87,6 +90,18 @@ logging.basicConfig(
     handlers=[logging.FileHandler("sovani_bot.log"), logging.StreamHandler()],
 )
 logger = logging.getLogger(__name__)
+
+# Validate configuration on startup (fail-fast)
+try:
+    settings = get_settings()
+    logger.info("✅ Configuration validated successfully")
+    logger.info(f"   - Telegram token: {settings.telegram_token[:10]}...")
+    logger.info(f"   - Manager chat ID: {settings.manager_chat_id}")
+    logger.info(f"   - OpenAI model: {settings.openai_model}")
+    logger.info(f"   - Database: {settings.database_url}")
+except RuntimeError as e:
+    logger.error(f"❌ Configuration validation failed: {e}")
+    raise
 
 # Инициализация бота
 bot = Bot(token=Config.TELEGRAM_TOKEN, parse_mode=types.ParseMode.HTML)
@@ -3236,9 +3251,7 @@ async def cmd_add_expense(message: types.Message):
         platform = (
             parts[4]
             if len(parts) > 4 and parts[4] not in ["all", "both"]
-            else parts[4]
-            if len(parts) > 4
-            else None
+            else parts[4] if len(parts) > 4 else None
         )
         category = parts[5] if len(parts) > 5 else None
 
