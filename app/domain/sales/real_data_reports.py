@@ -11,7 +11,7 @@ from typing import Any
 
 import api_clients_main as api_clients
 from api_chunking import ChunkedAPIManager
-from config import Config
+from app.core.config import get_settings
 from db import save_pnl_data
 
 logger = logging.getLogger(__name__)
@@ -440,7 +440,9 @@ class RealDataFinancialReports:
                 logger.warning("Не найдены файлы себестоимости")
 
             if not cost_data or not cost_data.get("sku_costs"):
-                logger.warning("Нет данных себестоимости, используем Config.COST_PRICE")
+                settings = get_settings()
+                default_cost = getattr(settings, "cost_price", 600)
+                logger.warning(f"Нет данных себестоимости, используем {default_cost}")
                 # Fallback на старый метод
                 delivered_count = sum(
                     1
@@ -448,9 +450,7 @@ class RealDataFinancialReports:
                     if sale.get("isRealization")
                     and date_from <= sale.get("date", "")[:10] <= date_to
                 )
-                return delivered_count * (
-                    Config.COST_PRICE if hasattr(Config, "COST_PRICE") else 600
-                )
+                return delivered_count * default_cost
 
             sku_costs = cost_data.get("sku_costs", {})
             total_cogs = 0
@@ -501,7 +501,9 @@ class RealDataFinancialReports:
                 for sale in sales_data
                 if sale.get("isRealization") and date_from <= sale.get("date", "")[:10] <= date_to
             )
-            return delivered_count * (Config.COST_PRICE if hasattr(Config, "COST_PRICE") else 600)
+            settings = get_settings()
+            default_cost = getattr(settings, "cost_price", 600)
+            return delivered_count * default_cost
 
     async def get_real_ozon_sales(self, date_from: str, date_to: str) -> dict[str, Any]:
         """Получение РЕАЛЬНЫХ продаж Ozon через chunked API с детальным разбором"""

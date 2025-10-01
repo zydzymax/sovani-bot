@@ -271,9 +271,12 @@ class _LegacyConfigShim:
 
 
 # Create singleton instance for legacy imports
+# DEPRECATED: Stage 6+ code should use get_settings() instead
+# Legacy shim kept for backward compatibility with root-level scripts
 config = _LegacyConfigShim()
 
 # For compatibility with old code patterns
+# DEPRECATED: Stage 6+ code should use get_settings() instead
 Config = _LegacyConfigShim
 
 

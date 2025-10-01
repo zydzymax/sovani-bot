@@ -11,7 +11,7 @@ from typing import Any
 import pandas as pd
 
 import api_clients_main as api_clients
-from config import Config
+from app.core.config import get_settings
 from db import save_pnl_data, save_replenishment_data
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,8 @@ class ReportAnalyzer:
 
     def __init__(self):
         self.reports_dir = "reports"
-        self.cost_price = Config.COST_PRICE  # Себестоимость по умолчанию
+        settings = get_settings()
+        self.cost_price = getattr(settings, "cost_price", 100)  # Себестоимость по умолчанию
 
     def load_wb_sales_json(self, file_path: str) -> pd.DataFrame | None:
         """Загрузка JSON отчета продаж Wildberries из API"""

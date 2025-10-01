@@ -4632,6 +4632,11 @@ async def handle_document_upload(message: types.Message):
             del user_waiting_for_file[user_id]
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the bot."""
     # Запуск бота
     executor.start_polling(dp, on_startup=on_startup, on_shutdown=on_shutdown, skip_updates=True)
+
+
+if __name__ == "__main__":
+    main()
