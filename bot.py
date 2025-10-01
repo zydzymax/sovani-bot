@@ -83,24 +83,41 @@ from real_data_reports import generate_cumulative_financial_report, generate_rea
 from reviews_bot_handlers import setup_reviews_handlers
 from wb_excel_processor import wb_excel_processor
 
-# Настройка логирования
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.FileHandler("sovani_bot.log"), logging.StreamHandler()],
+# NEW: Structured JSON logging
+from app.core.logging import get_logger, set_request_id, setup_logging
+from app.bot.middleware import RequestIdMiddleware
+
+# Setup structured JSON logging
+log_level = os.getenv("LOG_LEVEL", "INFO")
+log_file = os.getenv("LOG_FILE", "/var/log/sovani-bot/bot.jsonl")
+log_max_bytes = int(os.getenv("LOG_MAX_BYTES", "5242880"))  # 5MB
+log_backup_count = int(os.getenv("LOG_BACKUP_COUNT", "5"))
+
+setup_logging(
+    level=log_level,
+    to_stdout=True,
+    file_path=log_file if log_file else None,
+    max_bytes=log_max_bytes,
+    backup_count=log_backup_count,
 )
-logger = logging.getLogger(__name__)
+
+logger = get_logger("sovani_bot.bot")
 
 # Validate configuration on startup (fail-fast)
 try:
     settings = get_settings()
-    logger.info("✅ Configuration validated successfully")
-    logger.info(f"   - Telegram token: {settings.telegram_token[:10]}...")
-    logger.info(f"   - Manager chat ID: {settings.manager_chat_id}")
-    logger.info(f"   - OpenAI model: {settings.openai_model}")
-    logger.info(f"   - Database: {settings.database_url}")
+    logger.info(
+        "Configuration validated successfully",
+        extra={
+            "telegram_token_prefix": settings.telegram_token[:10],
+            "manager_chat_id": settings.manager_chat_id,
+            "openai_model": settings.openai_model,
+            "database": settings.database_url.split("://")[0],
+            "timezone": settings.app_timezone,
+        },
+    )
 except RuntimeError as e:
-    logger.error(f"❌ Configuration validation failed: {e}")
+    logger.error("Configuration validation failed", extra={"error": str(e)})
     raise
 
 # Инициализация бота
@@ -940,15 +957,19 @@ async def check_new_reviews_and_questions():
 
 async def on_startup(dp):
     """Действия при запуску бота"""
-    logger.info("Запуск SoVAni Bot...")
+    # Register middleware for request_id tracking
+    dp.middleware.setup(RequestIdMiddleware())
+    logger.info("Middleware registered", extra={"middleware": "RequestIdMiddleware"})
+
+    logger.info("Bot startup initiated", extra={"bot_name": "SoVAni Bot", "version": "2.0"})
 
     # Инициализация базы данных
     init_db()
-    logger.info("База данных инициализирована")
+    logger.info("Database initialized")
 
     # Инициализация HTTP клиента
     await http_async.init_http_client()
-    logger.info("HTTP клиент инициализирован")
+    logger.info("HTTP client initialized")
 
     # Настройка команд меню бота
     # Новое минимальное меню команд
@@ -3251,7 +3272,9 @@ async def cmd_add_expense(message: types.Message):
         platform = (
             parts[4]
             if len(parts) > 4 and parts[4] not in ["all", "both"]
-            else parts[4] if len(parts) > 4 else None
+            else parts[4]
+            if len(parts) > 4
+            else None
         )
         category = parts[5] if len(parts) > 5 else None
 
