@@ -77,6 +77,19 @@ class Settings(BaseSettings):
     app_timezone: str = Field("Europe/Moscow", description="Application timezone")
     http_timeout_seconds: int = Field(30, description="HTTP request timeout in seconds")
 
+    # === HTTP/Rate limits (per host) ===
+    wb_rate_per_min: int = Field(60, description="WB API rate limit per minute")
+    wb_rate_capacity: int = Field(60, description="WB API rate limit capacity")
+    ozon_rate_per_min: int = Field(300, description="Ozon API rate limit per minute")
+    ozon_rate_capacity: int = Field(300, description="Ozon API rate limit capacity")
+
+    # === Circuit breaker settings ===
+    cb_fail_threshold: int = Field(5, description="Circuit breaker failure threshold")
+    cb_reset_timeout: float = Field(30.0, description="Circuit breaker reset timeout in seconds")
+    http_max_retries: int = Field(3, description="Maximum HTTP retry attempts")
+    http_backoff_base: float = Field(0.75, description="HTTP retry backoff base delay")
+    http_backoff_max: float = Field(8.0, description="HTTP retry backoff max delay")
+
     @property
     def effective_chatgpt_key(self) -> str | None:
         """Return ChatGPT API key with fallback to OpenAI key."""

@@ -77,10 +77,11 @@ uploads/
 excel_reports/
 processed_costs/
 
-# Test files (excluding validation_test_suite.py which is part of project)
+# Test files (excluding validation_test_suite.py and tests/ directory)
 test_*.py
 *_test.py
 !validation_test_suite.py
+!tests/**/*.py
 
 # Test artifacts and validation results
 validation_*.json
