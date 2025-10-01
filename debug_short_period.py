@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""
-Диагностика данных за короткий период
-"""
+"""Диагностика данных за короткий период"""
 
 import asyncio
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 async def debug_short_period():
     """Диагностика данных за короткий период"""
@@ -26,37 +25,39 @@ async def debug_short_period():
         logger.info("\n📊 WB данные...")
         wb_data = await reports.get_real_wb_sales(date_from, date_to)
 
-        logger.info(f"WB результаты:")
+        logger.info("WB результаты:")
         logger.info(f"  Выручка: {wb_data.get('revenue', 0):,.2f} ₽")
         logger.info(f"  Единиц доставлено: {wb_data.get('units', 0)}")
         logger.info(f"  Заказов единиц: {wb_data.get('orders_units', 0)}")
         logger.info(f"  Процент выкупа: {wb_data.get('buyout_rate', 0):.1f}%")
 
         # Анализируем первые записи
-        if 'sales_data' in wb_data and wb_data['sales_data']:
-            sales_data = wb_data['sales_data']
+        if wb_data.get("sales_data"):
+            sales_data = wb_data["sales_data"]
             logger.info(f"\n🔍 Первые 5 записей WB ({len(sales_data)} всего):")
 
             for i, sale in enumerate(sales_data[:5]):
                 logger.info(f"  {i+1}. Дата: {sale.get('date', '')[:19]}")
                 logger.info(f"     Реализация: {sale.get('isRealization')}")
                 logger.info(f"     Поставка: {sale.get('isSupply')}")
-                logger.info(f"     Цена: {sale.get('totalPrice', 0)} → {sale.get('priceWithDisc', 0)} ₽")
+                logger.info(
+                    f"     Цена: {sale.get('totalPrice', 0)} → {sale.get('priceWithDisc', 0)} ₽"
+                )
                 logger.info(f"     К доплате: {sale.get('forPay', 0)} ₽")
 
         # Проверяем Ozon данные
         logger.info("\n📊 Ozon данные...")
         ozon_data = await reports.get_real_ozon_sales(date_from, date_to)
 
-        logger.info(f"Ozon результаты:")
+        logger.info("Ozon результаты:")
         logger.info(f"  Выручка: {ozon_data.get('revenue', 0):,.2f} ₽")
         logger.info(f"  Единиц: {ozon_data.get('units', 0)}")
 
         # Проверяем прямые API вызовы
         logger.info("\n🔄 Прямые API вызовы...")
 
-        from api_chunking import ChunkedAPIManager
         import api_clients_main as api_clients
+        from api_chunking import ChunkedAPIManager
 
         chunked_api = ChunkedAPIManager(api_clients)
 
@@ -84,9 +85,10 @@ async def debug_short_period():
         logger.info("\n📁 Старый метод WB...")
         try:
             wb_reports = await api_clients.download_wb_reports()
-            if wb_reports and wb_reports.get('sales'):
-                with open(wb_reports['sales'], 'r', encoding='utf-8') as f:
+            if wb_reports and wb_reports.get("sales"):
+                with open(wb_reports["sales"], encoding="utf-8") as f:
                     import json
+
                     old_sales = json.load(f)
 
                 logger.info(f"Старый файл WB: {len(old_sales)} записей")
@@ -94,11 +96,13 @@ async def debug_short_period():
                 # Фильтруем по датам
                 filtered_sales = []
                 for sale in old_sales:
-                    sale_date = sale.get('date', '')[:10]
+                    sale_date = sale.get("date", "")[:10]
                     if date_from <= sale_date <= date_to:
                         filtered_sales.append(sale)
 
-                logger.info(f"Отфильтровано за {date_from}-{date_to}: {len(filtered_sales)} записей")
+                logger.info(
+                    f"Отфильтровано за {date_from}-{date_to}: {len(filtered_sales)} записей"
+                )
 
                 if filtered_sales:
                     logger.info("Пример записи:")
@@ -115,7 +119,9 @@ async def debug_short_period():
     except Exception as e:
         logger.error(f"❌ Ошибка: {e}")
         import traceback
+
         traceback.print_exc()
+
 
 if __name__ == "__main__":
     asyncio.run(debug_short_period())

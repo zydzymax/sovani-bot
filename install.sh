@@ -53,11 +53,11 @@ async def test_apis():
     wb_ok = await test_wb_connection()
     ozon_ok = await test_ozon_connection()
     openai_ok = await test_openai_connection()
-    
+
     print(f'WB API: {\"✅ OK\" if wb_ok else \"❌ Ошибка\"}')
     print(f'Ozon API: {\"✅ OK\" if ozon_ok else \"❌ Ошибка\"}')
     print(f'OpenAI API: {\"✅ OK\" if openai_ok else \"❌ Ошибка\"}')
-    
+
     return wb_ok or ozon_ok  # Хотя бы один маркетплейс должен работать
 
 asyncio.run(test_apis())

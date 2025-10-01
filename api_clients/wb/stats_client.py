@@ -1,18 +1,18 @@
-"""
-Wildberries Statistics API Client
+"""Wildberries Statistics API Client
 Клиент для работы с API статистики и продаж Wildberries
 """
 
-import aiohttp
 import asyncio
 import logging
-from datetime import date, datetime
-from typing import List, Dict, Any, Optional
-import sys
 import os
+import sys
+from datetime import date
+from typing import Any
+
+import aiohttp
 
 # Добавляем путь к корневой директории проекта
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from config import Config
 
 logger = logging.getLogger(__name__)
@@ -25,14 +25,15 @@ class WBStatsClient:
 
     def __init__(self):
         self.headers = {
-            'Authorization': f'Bearer {Config.WB_STATS_TOKEN}',
-            'Content-Type': 'application/json'
+            "Authorization": f"Bearer {Config.WB_STATS_TOKEN}",
+            "Content-Type": "application/json",
         }
         logger.info("WBStatsClient инициализирован")
 
-    async def sales(self, date_from: date, date_to: date, limit: int = 100000) -> List[Dict[str, Any]]:
-        """
-        Получение данных о продажах за период
+    async def sales(
+        self, date_from: date, date_to: date, limit: int = 100000
+    ) -> list[dict[str, Any]]:
+        """Получение данных о продажах за период
 
         Args:
             date_from: Дата начала периода
@@ -45,13 +46,14 @@ class WBStatsClient:
             subject, brand, techSize, incomeID, isSupply, isRealization, totalPrice,
             discountPercent, spp, finishedPrice, priceWithDisc, isStorno, orderType,
             sticker, gNumber, srid, forPay
+
         """
         try:
             url = f"{self.BASE_URL}/api/v1/supplier/sales"
             params = {
-                'dateFrom': date_from.strftime('%Y-%m-%d'),
-                'dateTo': date_to.strftime('%Y-%m-%d'),
-                'limit': limit
+                "dateFrom": date_from.strftime("%Y-%m-%d"),
+                "dateTo": date_to.strftime("%Y-%m-%d"),
+                "limit": limit,
             }
 
             logger.info(f"Запрос продаж WB с {date_from} по {date_to}")
@@ -75,26 +77,33 @@ class WBStatsClient:
                         logger.warning("WB Stats API: Превышен лимит запросов, ожидаем...")
                         await asyncio.sleep(60)  # Ждем минуту
                         # Повторный запрос
-                        async with session.get(url, headers=self.headers, params=params) as retry_response:
+                        async with session.get(
+                            url, headers=self.headers, params=params
+                        ) as retry_response:
                             if retry_response.status == 200:
                                 retry_data = await retry_response.json()
                                 logger.info(f"WB API (retry): получено {len(retry_data)} продаж")
                                 return retry_data
                             else:
                                 logger.error(f"WB Stats API retry failed: {retry_response.status}")
-                                raise Exception(f"WB Stats API ошибка после retry: {retry_response.status}")
+                                raise Exception(
+                                    f"WB Stats API ошибка после retry: {retry_response.status}"
+                                )
 
                     else:
-                        logger.error(f"WB Stats API ошибка {response.status}: {response_text[:500]}...")
+                        logger.error(
+                            f"WB Stats API ошибка {response.status}: {response_text[:500]}..."
+                        )
                         raise Exception(f"WB Stats API ошибка: {response.status}")
 
         except Exception as e:
             logger.error(f"Критическая ошибка WB Stats API: {e}")
             raise
 
-    async def orders(self, date_from: date, date_to: date, limit: int = 100000) -> List[Dict[str, Any]]:
-        """
-        Получение данных о заказах за период
+    async def orders(
+        self, date_from: date, date_to: date, limit: int = 100000
+    ) -> list[dict[str, Any]]:
+        """Получение данных о заказах за период
 
         Args:
             date_from: Дата начала периода
@@ -103,13 +112,14 @@ class WBStatsClient:
 
         Returns:
             Список заказов
+
         """
         try:
             url = f"{self.BASE_URL}/api/v1/supplier/orders"
             params = {
-                'dateFrom': date_from.strftime('%Y-%m-%d'),
-                'dateTo': date_to.strftime('%Y-%m-%d'),
-                'limit': limit
+                "dateFrom": date_from.strftime("%Y-%m-%d"),
+                "dateTo": date_to.strftime("%Y-%m-%d"),
+                "limit": limit,
             }
 
             logger.info(f"Запрос заказов WB с {date_from} по {date_to}")
@@ -117,7 +127,6 @@ class WBStatsClient:
             timeout = aiohttp.ClientTimeout(total=60, connect=10)
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(url, headers=self.headers, params=params) as response:
-
                     if response.status == 200:
                         orders_data = await response.json()
                         logger.info(f"WB API: получено {len(orders_data)} заказов")
@@ -129,35 +138,34 @@ class WBStatsClient:
 
                     else:
                         response_text = await response.text()
-                        logger.error(f"WB Orders API ошибка {response.status}: {response_text[:500]}")
+                        logger.error(
+                            f"WB Orders API ошибка {response.status}: {response_text[:500]}"
+                        )
                         raise Exception(f"WB Orders API ошибка: {response.status}")
 
         except Exception as e:
             logger.error(f"Критическая ошибка WB Orders API: {e}")
             raise
 
-    async def stocks(self, date_from: date) -> List[Dict[str, Any]]:
-        """
-        Получение данных об остатках на указанную дату
+    async def stocks(self, date_from: date) -> list[dict[str, Any]]:
+        """Получение данных об остатках на указанную дату
 
         Args:
             date_from: Дата для получения остатков
 
         Returns:
             Список остатков товаров
+
         """
         try:
             url = f"{self.BASE_URL}/api/v1/supplier/stocks"
-            params = {
-                'dateFrom': date_from.strftime('%Y-%m-%d')
-            }
+            params = {"dateFrom": date_from.strftime("%Y-%m-%d")}
 
             logger.info(f"Запрос остатков WB на {date_from}")
 
             timeout = aiohttp.ClientTimeout(total=60, connect=10)
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(url, headers=self.headers, params=params) as response:
-
                     if response.status == 200:
                         stocks_data = await response.json()
                         logger.info(f"WB API: получено {len(stocks_data)} позиций остатков")
@@ -169,16 +177,19 @@ class WBStatsClient:
 
                     else:
                         response_text = await response.text()
-                        logger.error(f"WB Stocks API ошибка {response.status}: {response_text[:500]}")
+                        logger.error(
+                            f"WB Stocks API ошибка {response.status}: {response_text[:500]}"
+                        )
                         raise Exception(f"WB Stocks API ошибка: {response.status}")
 
         except Exception as e:
             logger.error(f"Критическая ошибка WB Stocks API: {e}")
             raise
 
-    async def report_detail_by_period(self, date_from: date, date_to: date, limit: int = 100000) -> List[Dict[str, Any]]:
-        """
-        Получение детализированного отчета за период
+    async def report_detail_by_period(
+        self, date_from: date, date_to: date, limit: int = 100000
+    ) -> list[dict[str, Any]]:
+        """Получение детализированного отчета за период
         Включает продажи, возвраты, отмены и другие операции
 
         Args:
@@ -188,13 +199,14 @@ class WBStatsClient:
 
         Returns:
             Детализированный отчет
+
         """
         try:
             url = f"{self.BASE_URL}/api/v5/supplier/reportDetailByPeriod"
             params = {
-                'dateFrom': date_from.strftime('%Y-%m-%d'),
-                'dateTo': date_to.strftime('%Y-%m-%d'),
-                'limit': limit
+                "dateFrom": date_from.strftime("%Y-%m-%d"),
+                "dateTo": date_to.strftime("%Y-%m-%d"),
+                "limit": limit,
             }
 
             logger.info(f"Запрос детализированного отчета WB с {date_from} по {date_to}")
@@ -202,10 +214,11 @@ class WBStatsClient:
             timeout = aiohttp.ClientTimeout(total=60, connect=10)
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(url, headers=self.headers, params=params) as response:
-
                     if response.status == 200:
                         report_data = await response.json()
-                        logger.info(f"WB API: получено {len(report_data)} записей детализированного отчета")
+                        logger.info(
+                            f"WB API: получено {len(report_data)} записей детализированного отчета"
+                        )
                         return report_data
 
                     elif response.status == 401:
@@ -214,7 +227,9 @@ class WBStatsClient:
 
                     else:
                         response_text = await response.text()
-                        logger.error(f"WB Report API ошибка {response.status}: {response_text[:500]}")
+                        logger.error(
+                            f"WB Report API ошибка {response.status}: {response_text[:500]}"
+                        )
                         raise Exception(f"WB Report API ошибка: {response.status}")
 
         except Exception as e:
@@ -231,6 +246,7 @@ if __name__ == "__main__":
 
         # Тестируем получение продаж за последнюю неделю
         from datetime import timedelta
+
         date_to = date.today()
         date_from = date_to - timedelta(days=7)
 
@@ -242,7 +258,7 @@ if __name__ == "__main__":
                 print("Пример записи продажи:")
                 print(sales[0])
 
-                total_revenue = sum(sale.get('forPay', 0) for sale in sales)
+                total_revenue = sum(sale.get("forPay", 0) for sale in sales)
                 print(f"Общая выручка: {total_revenue:.2f} ₽")
             else:
                 print("Продаж за период не найдено")

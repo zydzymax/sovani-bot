@@ -1,9 +1,7 @@
-"""
-API clients for SoVAni Bot
-"""
+"""API clients for SoVAni Bot"""
 
-from .wb.stats_client import WBStatsClient
 from .ozon.sales_client import OzonSalesClient
+from .wb.stats_client import WBStatsClient
 
 # Создаем готовые экземпляры для использования в системе
 try:
@@ -14,4 +12,4 @@ except Exception as e:
     wb_api = None
     ozon_api = None
 
-__all__ = ['WBStatsClient', 'OzonSalesClient', 'wb_api', 'ozon_api']
+__all__ = ["WBStatsClient", "OzonSalesClient", "wb_api", "ozon_api"]

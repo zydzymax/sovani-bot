@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
-"""
-БЫСТРАЯ ПРОВЕРКА ДОСТУПНОСТИ ГОДОВЫХ ДАННЫХ
+"""БЫСТРАЯ ПРОВЕРКА ДОСТУПНОСТИ ГОДОВЫХ ДАННЫХ
 Краткий анализ что реально доступно по API
 """
 
 import asyncio
 import logging
-from api_chunking import ChunkedAPIManager
-import api_clients_main as api_clients
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+import api_clients_main as api_clients
+from api_chunking import ChunkedAPIManager
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 async def quick_api_test():
     """Быстрый тест доступности данных"""
-
     logger.info("⚡ БЫСТРАЯ ПРОВЕРКА ДОСТУПНОСТИ ДАННЫХ ПО API")
     logger.info("=" * 60)
 
@@ -24,7 +24,7 @@ async def quick_api_test():
     test_periods = [
         ("2024-01-01", "2024-01-31", "2024 январь"),
         ("2025-01-01", "2025-01-31", "2025 январь"),
-        ("2025-04-01", "2025-04-30", "2025 апрель (известен)")
+        ("2025-04-01", "2025-04-30", "2025 апрель (известен)"),
     ]
 
     logger.info("🟣 WB API - КРАТКИЙ ТЕСТ:")
@@ -42,10 +42,10 @@ async def quick_api_test():
                 sample_dates = []
                 sample_sum = 0
                 for record in sales_data[:5]:
-                    raw_date = record.get('date', '')
-                    parsed_date = raw_date.split('T')[0] if 'T' in raw_date else raw_date[:10]
+                    raw_date = record.get("date", "")
+                    parsed_date = raw_date.split("T")[0] if "T" in raw_date else raw_date[:10]
                     sample_dates.append(parsed_date)
-                    sample_sum += record.get('forPay', 0) or 0
+                    sample_sum += record.get("forPay", 0) or 0
 
                 date_range = f"{min(sample_dates)} → {max(sample_dates)}" if sample_dates else "N/A"
 
@@ -58,14 +58,14 @@ async def quick_api_test():
                     in_range = sum(1 for d in sample_dates if date_from <= d <= date_to)
                     logger.info(f"   🎯 В периоде: {in_range}/{len(sample_dates)}")
             else:
-                logger.info(f"   ❌ Нет данных")
+                logger.info("   ❌ Нет данных")
 
         except Exception as e:
             logger.error(f"   ❌ Ошибка: {e}")
 
         await asyncio.sleep(3)
 
-    logger.info(f"\n🟦 OZON API - КРАТКИЙ ТЕСТ:")
+    logger.info("\n🟦 OZON API - КРАТКИЙ ТЕСТ:")
 
     for date_from, date_to, description in test_periods:
         logger.info(f"\n📅 {description}: {date_from} → {date_to}")
@@ -80,16 +80,16 @@ async def quick_api_test():
                 operations = {}
                 revenue_sum = 0
                 for record in fbs_data[:10]:
-                    op_type = record.get('operation_type', 'unknown')
+                    op_type = record.get("operation_type", "unknown")
                     operations[op_type] = operations.get(op_type, 0) + 1
-                    if op_type == 'OperationAgentDeliveredToCustomer':
-                        revenue_sum += record.get('accruals_for_sale', 0) or 0
+                    if op_type == "OperationAgentDeliveredToCustomer":
+                        revenue_sum += record.get("accruals_for_sale", 0) or 0
 
                 logger.info(f"   ✅ Данные: {fbs_count} транзакций")
                 logger.info(f"   📊 Операций: {len(operations)} типов")
                 logger.info(f"   💰 Доставлено (10 записей): {revenue_sum:,.0f} ₽")
             else:
-                logger.info(f"   ❌ Нет данных")
+                logger.info("   ❌ Нет данных")
 
         except Exception as e:
             logger.error(f"   ❌ Ошибка: {e}")
@@ -97,7 +97,7 @@ async def quick_api_test():
         await asyncio.sleep(2)
 
     # Выводы на основе предыдущих тестов
-    logger.info(f"\n" + "=" * 60)
+    logger.info("\n" + "=" * 60)
     logger.info("📋 ВЫВОДЫ НА ОСНОВЕ ПОЛУЧЕННЫХ ДАННЫХ:")
     logger.info("")
 
@@ -145,6 +145,7 @@ async def quick_api_test():
     logger.info("   ⚠️  Но данные ограничены апрель-сентябрь 2025")
     logger.info("   💡 Для полного года нужны дополнительные источники")
     logger.info("   🛠️  Ozon требует исправления доступов к API")
+
 
 if __name__ == "__main__":
     asyncio.run(quick_api_test())

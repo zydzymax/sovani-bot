@@ -1,15 +1,15 @@
-"""
-Оптимизированный API клиент с объединением запросов и умными задержками
-"""
+"""Оптимизированный API клиент с объединением запросов и умными задержками"""
+
 import asyncio
-import aiohttp
 import logging
-from typing import Dict, List, Any, Optional, Tuple
-from datetime import datetime, timedelta
 from contextlib import asynccontextmanager
-import json
 from dataclasses import dataclass
-from api_clients_main import WildberriesAPI, OzonAPI, WBBusinessAPI
+from datetime import datetime
+from typing import Any
+
+import aiohttp
+
+from api_clients_main import OzonAPI, WBBusinessAPI, WildberriesAPI
 
 logger = logging.getLogger(__name__)
 
@@ -17,10 +17,11 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BatchRequest:
     """Пакетный запрос для оптимизации"""
+
     api_type: str
     endpoint: str
-    params: Dict[str, Any]
-    headers: Dict[str, str]
+    params: dict[str, Any]
+    headers: dict[str, str]
     priority: int = 1  # 1 - высокий, 2 - обычный, 3 - низкий
 
 
@@ -33,10 +34,10 @@ class OptimizedAPIClient:
         self.wb_business_api = WBBusinessAPI()
         self._session_pool = {}
         self._rate_limits = {
-            'wb_orders': {'requests': 0, 'window_start': datetime.now(), 'max_per_minute': 25},
-            'wb_sales': {'requests': 0, 'window_start': datetime.now(), 'max_per_minute': 25},
-            'wb_advertising': {'requests': 0, 'window_start': datetime.now(), 'max_per_minute': 15},
-            'ozon_api': {'requests': 0, 'window_start': datetime.now(), 'max_per_minute': 30},
+            "wb_orders": {"requests": 0, "window_start": datetime.now(), "max_per_minute": 25},
+            "wb_sales": {"requests": 0, "window_start": datetime.now(), "max_per_minute": 25},
+            "wb_advertising": {"requests": 0, "window_start": datetime.now(), "max_per_minute": 15},
+            "ozon_api": {"requests": 0, "window_start": datetime.now(), "max_per_minute": 30},
         }
 
     @asynccontextmanager
@@ -51,8 +52,7 @@ class OptimizedAPIClient:
                 use_dns_cache=True,
             )
             self._session_pool[api_type] = aiohttp.ClientSession(
-                timeout=timeout,
-                connector=connector
+                timeout=timeout, connector=connector
             )
 
         try:
@@ -72,14 +72,14 @@ class OptimizedAPIClient:
         rate_info = self._rate_limits[api_type]
 
         # Сброс счетчика если прошла минута
-        if (now - rate_info['window_start']).total_seconds() >= 60:
-            rate_info['requests'] = 0
-            rate_info['window_start'] = now
+        if (now - rate_info["window_start"]).total_seconds() >= 60:
+            rate_info["requests"] = 0
+            rate_info["window_start"] = now
 
         # Проверяем превышение лимита
-        if rate_info['requests'] >= rate_info['max_per_minute']:
+        if rate_info["requests"] >= rate_info["max_per_minute"]:
             # Нужно ждать до начала новой минуты
-            seconds_to_wait = 60 - (now - rate_info['window_start']).total_seconds()
+            seconds_to_wait = 60 - (now - rate_info["window_start"]).total_seconds()
             logger.info(f"Rate limit для {api_type}: ждем {seconds_to_wait:.1f}с")
             return max(seconds_to_wait, 0)
 
@@ -93,17 +93,14 @@ class OptimizedAPIClient:
             await asyncio.sleep(delay)
 
         # Увеличиваем счетчик запросов
-        self._rate_limits[api_type]['requests'] += 1
+        self._rate_limits[api_type]["requests"] += 1
 
         # Выполняем запрос
         return await request_func()
 
-    async def batch_wb_data(self, date_chunks: List[Tuple[str, str]]) -> Dict[str, List]:
+    async def batch_wb_data(self, date_chunks: list[tuple[str, str]]) -> dict[str, list]:
         """Пакетное получение WB данных (заказы + продажи одновременно)"""
-        results = {
-            'orders': [],
-            'sales': []
-        }
+        results = {"orders": [], "sales": []}
 
         # Группируем запросы по приоритету
         high_priority_chunks = date_chunks[:3]  # Первые 3 чанка с высоким приоритетом
@@ -117,13 +114,15 @@ class OptimizedAPIClient:
             orders_task = self._get_wb_orders_optimized(chunk_from, chunk_to)
             sales_task = self._get_wb_sales_optimized(chunk_from, chunk_to)
 
-            orders_data, sales_data = await asyncio.gather(orders_task, sales_task, return_exceptions=True)
+            orders_data, sales_data = await asyncio.gather(
+                orders_task, sales_task, return_exceptions=True
+            )
 
             if not isinstance(orders_data, Exception) and orders_data:
-                results['orders'].extend(orders_data)
+                results["orders"].extend(orders_data)
 
             if not isinstance(sales_data, Exception) and sales_data:
-                results['sales'].extend(sales_data)
+                results["sales"].extend(sales_data)
 
             # Задержка между приоритетными чанками
             await asyncio.sleep(8.0)
@@ -138,13 +137,13 @@ class OptimizedAPIClient:
 
                 orders_data = await self._get_wb_orders_optimized(chunk_from, chunk_to)
                 if orders_data:
-                    results['orders'].extend(orders_data)
+                    results["orders"].extend(orders_data)
 
                 await asyncio.sleep(5.0)  # Между заказами и продажами
 
                 sales_data = await self._get_wb_sales_optimized(chunk_from, chunk_to)
                 if sales_data:
-                    results['sales'].extend(sales_data)
+                    results["sales"].extend(sales_data)
 
             except Exception as e:
                 logger.error(f"Ошибка обработки WB чанка {chunk_from}-{chunk_to}: {e}")
@@ -152,62 +151,69 @@ class OptimizedAPIClient:
 
         return results
 
-    async def _get_wb_orders_optimized(self, date_from: str, date_to: str) -> List[Dict]:
+    async def _get_wb_orders_optimized(self, date_from: str, date_to: str) -> list[dict]:
         """Оптимизированное получение WB заказов"""
+
         async def request_func():
-            async with self.get_session('wb_api') as session:
+            async with self.get_session("wb_api") as session:
                 url = f"{self.wb_api.STATS_BASE_URL}/api/v1/supplier/orders"
                 params = {
-                    'dateFrom': date_from,
-                    'dateTo': date_to,
-                    'limit': 100000  # Максимальный лимит за раз
+                    "dateFrom": date_from,
+                    "dateTo": date_to,
+                    "limit": 100000,  # Максимальный лимит за раз
                 }
-                headers = self.wb_api._get_headers('stats')
+                headers = self.wb_api._get_headers("stats")
 
                 async with session.get(url, params=params, headers=headers) as response:
                     if response.status == 200:
                         return await response.json()
                     elif response.status == 429:
-                        logger.warning(f"429 для WB orders {date_from}-{date_to}, повторяем через 60с")
+                        logger.warning(
+                            f"429 для WB orders {date_from}-{date_to}, повторяем через 60с"
+                        )
                         await asyncio.sleep(60)
                         return await request_func()  # Рекурсивный повтор
                     else:
-                        logger.error(f"WB orders API error {response.status} for {date_from}-{date_to}")
+                        logger.error(
+                            f"WB orders API error {response.status} for {date_from}-{date_to}"
+                        )
                         return []
 
-        return await self._execute_request_with_rate_limit('wb_orders', request_func)
+        return await self._execute_request_with_rate_limit("wb_orders", request_func)
 
-    async def _get_wb_sales_optimized(self, date_from: str, date_to: str) -> List[Dict]:
+    async def _get_wb_sales_optimized(self, date_from: str, date_to: str) -> list[dict]:
         """Оптимизированное получение WB продаж"""
+
         async def request_func():
-            async with self.get_session('wb_api') as session:
+            async with self.get_session("wb_api") as session:
                 url = f"{self.wb_api.STATS_BASE_URL}/api/v1/supplier/sales"
                 params = {
-                    'dateFrom': date_from,
-                    'dateTo': date_to,
-                    'limit': 100000  # Максимальный лимит за раз
+                    "dateFrom": date_from,
+                    "dateTo": date_to,
+                    "limit": 100000,  # Максимальный лимит за раз
                 }
-                headers = self.wb_api._get_headers('stats')
+                headers = self.wb_api._get_headers("stats")
 
                 async with session.get(url, params=params, headers=headers) as response:
                     if response.status == 200:
                         return await response.json()
                     elif response.status == 429:
-                        logger.warning(f"429 для WB sales {date_from}-{date_to}, повторяем через 60с")
+                        logger.warning(
+                            f"429 для WB sales {date_from}-{date_to}, повторяем через 60с"
+                        )
                         await asyncio.sleep(60)
                         return await request_func()  # Рекурсивный повтор
                     else:
-                        logger.error(f"WB sales API error {response.status} for {date_from}-{date_to}")
+                        logger.error(
+                            f"WB sales API error {response.status} for {date_from}-{date_to}"
+                        )
                         return []
 
-        return await self._execute_request_with_rate_limit('wb_sales', request_func)
+        return await self._execute_request_with_rate_limit("wb_sales", request_func)
 
-    async def batch_ozon_data(self, date_chunks: List[Tuple[str, str]]) -> Dict[str, List]:
+    async def batch_ozon_data(self, date_chunks: list[tuple[str, str]]) -> dict[str, list]:
         """Пакетное получение Ozon данных"""
-        results = {
-            'fbo_orders': [],
-            'fbs_transactions': []
-        }
+        results = {"fbo_orders": [], "fbs_transactions": []}
 
         # Обрабатываем чанки последовательно с оптимальными задержками
         for i, (chunk_from, chunk_to) in enumerate(date_chunks):
@@ -218,13 +224,15 @@ class OptimizedAPIClient:
                 fbo_task = self._get_ozon_fbo_optimized(chunk_from, chunk_to)
                 fbs_task = self._get_ozon_fbs_optimized(chunk_from, chunk_to)
 
-                fbo_data, fbs_data = await asyncio.gather(fbo_task, fbs_task, return_exceptions=True)
+                fbo_data, fbs_data = await asyncio.gather(
+                    fbo_task, fbs_task, return_exceptions=True
+                )
 
                 if not isinstance(fbo_data, Exception) and fbo_data:
-                    results['fbo_orders'].extend(fbo_data)
+                    results["fbo_orders"].extend(fbo_data)
 
                 if not isinstance(fbs_data, Exception) and fbs_data:
-                    results['fbs_transactions'].extend(fbs_data)
+                    results["fbs_transactions"].extend(fbs_data)
 
                 # Задержка между чанками Ozon
                 if i < len(date_chunks) - 1:
@@ -236,25 +244,26 @@ class OptimizedAPIClient:
 
         return results
 
-    async def _get_ozon_fbo_optimized(self, date_from: str, date_to: str) -> List[Dict]:
+    async def _get_ozon_fbo_optimized(self, date_from: str, date_to: str) -> list[dict]:
         """Оптимизированное получение Ozon FBO"""
         try:
             from api_clients.ozon.sales_client import OzonSalesClient
+
             sales_client = OzonSalesClient()
 
-            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
-            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+            date_from_obj = datetime.strptime(date_from, "%Y-%m-%d").date()
+            date_to_obj = datetime.strptime(date_to, "%Y-%m-%d").date()
 
             async def request_func():
                 return await sales_client.get_fbo_orders(date_from_obj, date_to_obj)
 
-            fbo_data = await self._execute_request_with_rate_limit('ozon_api', request_func)
+            fbo_data = await self._execute_request_with_rate_limit("ozon_api", request_func)
 
             # Обрабатываем ответ
             if isinstance(fbo_data, dict):
-                result = fbo_data.get('result', {})
+                result = fbo_data.get("result", {})
                 if isinstance(result, dict):
-                    return result.get('postings', [])
+                    return result.get("postings", [])
                 elif isinstance(result, list):
                     return result
             elif isinstance(fbo_data, list):
@@ -266,25 +275,26 @@ class OptimizedAPIClient:
             logger.error(f"Ошибка получения Ozon FBO для {date_from}-{date_to}: {e}")
             return []
 
-    async def _get_ozon_fbs_optimized(self, date_from: str, date_to: str) -> List[Dict]:
+    async def _get_ozon_fbs_optimized(self, date_from: str, date_to: str) -> list[dict]:
         """Оптимизированное получение Ozon FBS"""
         try:
             from api_clients.ozon.sales_client import OzonSalesClient
+
             sales_client = OzonSalesClient()
 
-            date_from_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
-            date_to_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+            date_from_obj = datetime.strptime(date_from, "%Y-%m-%d").date()
+            date_to_obj = datetime.strptime(date_to, "%Y-%m-%d").date()
 
             async def request_func():
                 return await sales_client.get_transactions(date_from_obj, date_to_obj)
 
-            return await self._execute_request_with_rate_limit('ozon_api', request_func)
+            return await self._execute_request_with_rate_limit("ozon_api", request_func)
 
         except Exception as e:
             logger.error(f"Ошибка получения Ozon FBS для {date_from}-{date_to}: {e}")
             return []
 
-    async def get_wb_advertising_batch(self, date_chunks: List[Tuple[str, str]]) -> Dict[str, Any]:
+    async def get_wb_advertising_batch(self, date_chunks: list[tuple[str, str]]) -> dict[str, Any]:
         """Пакетное получение рекламных данных WB"""
         total_spend = 0.0
         total_views = 0
@@ -298,7 +308,9 @@ class OptimizedAPIClient:
                 async def request_func():
                     return await self.wb_business_api.get_fullstats_v3(chunk_from, chunk_to)
 
-                chunk_data = await self._execute_request_with_rate_limit('wb_advertising', request_func)
+                chunk_data = await self._execute_request_with_rate_limit(
+                    "wb_advertising", request_func
+                )
 
                 if chunk_data:
                     total_spend += chunk_data.get("total_spend", 0.0)
@@ -318,20 +330,20 @@ class OptimizedAPIClient:
             "total_spend": total_spend,
             "total_views": total_views,
             "total_clicks": total_clicks,
-            "campaigns": all_campaigns
+            "campaigns": all_campaigns,
         }
 
-    def get_optimization_stats(self) -> Dict[str, Any]:
+    def get_optimization_stats(self) -> dict[str, Any]:
         """Статистика оптимизации запросов"""
         return {
-            'rate_limits': self._rate_limits,
-            'active_sessions': len(self._session_pool),
-            'optimization_features': [
-                'Пакетные запросы по чанкам',
-                'Параллельные запросы внутри чанка',
-                'Умные задержки по приоритету',
-                'Переиспользование HTTP сессий',
-                'Автоматические повторы при 429',
-                'Rate limiting по типам API'
-            ]
+            "rate_limits": self._rate_limits,
+            "active_sessions": len(self._session_pool),
+            "optimization_features": [
+                "Пакетные запросы по чанкам",
+                "Параллельные запросы внутри чанка",
+                "Умные задержки по приоритету",
+                "Переиспользование HTTP сессий",
+                "Автоматические повторы при 429",
+                "Rate limiting по типам API",
+            ],
         }

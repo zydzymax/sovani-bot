@@ -1,30 +1,29 @@
 #!/usr/bin/env python3
-"""
-АНАЛИЗ ДАННЫХ ЗА АПРЕЛЬ-СЕНТЯБРЬ 2025
+"""АНАЛИЗ ДАННЫХ ЗА АПРЕЛЬ-СЕНТЯБРЬ 2025
 Сравнение системных данных с реальными показателями WB
 """
 
 import asyncio
 import logging
-from datetime import datetime
-from real_data_reports import RealDataFinancialReports
-from api_chunking import ChunkedAPIManager
-import api_clients_main as api_clients
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+import api_clients_main as api_clients
+from api_chunking import ChunkedAPIManager
+from real_data_reports import RealDataFinancialReports
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 async def analyze_april_september_data():
     """Детальный анализ данных за апрель-сентябрь 2025"""
-
     logger.info("🔍 АНАЛИЗ ДАННЫХ ЗА АПРЕЛЬ-СЕНТЯБРЬ 2025")
     logger.info("=" * 60)
 
     # Реальные данные от пользователя
     REAL_DELIVERED = 413586  # ₽ выкупы
-    REAL_ORDERS = 723738     # ₽ заказы
+    REAL_ORDERS = 723738  # ₽ заказы
 
-    logger.info(f"📊 РЕАЛЬНЫЕ ДАННЫЕ WB ЗА АПРЕЛЬ-СЕНТЯБРЬ:")
+    logger.info("📊 РЕАЛЬНЫЕ ДАННЫЕ WB ЗА АПРЕЛЬ-СЕНТЯБРЬ:")
     logger.info(f"   Выкупы: {REAL_DELIVERED:,} ₽")
     logger.info(f"   Заказы: {REAL_ORDERS:,} ₽")
     logger.info("")
@@ -57,9 +56,9 @@ async def analyze_april_september_data():
         logger.info("📅 АНАЛИЗ ПОКРЫТИЯ ДАННЫХ:")
         all_sales_dates = []
         for record in sales_data:
-            raw_date = record.get('date', '')
-            if 'T' in raw_date:
-                parsed_date = raw_date.split('T')[0]
+            raw_date = record.get("date", "")
+            if "T" in raw_date:
+                parsed_date = raw_date.split("T")[0]
             else:
                 parsed_date = raw_date[:10]
             if parsed_date:
@@ -89,21 +88,21 @@ async def analyze_april_september_data():
 
         for record in sales_data:
             # Фильтруем по периоду
-            raw_date = record.get('date', '')
-            if 'T' in raw_date:
-                parsed_date = raw_date.split('T')[0]
+            raw_date = record.get("date", "")
+            if "T" in raw_date:
+                parsed_date = raw_date.split("T")[0]
             else:
                 parsed_date = raw_date[:10]
 
             if not (date_from <= parsed_date <= date_to):
                 continue
 
-            is_realization = record.get('isRealization', False)
+            is_realization = record.get("isRealization", False)
             if not is_realization:
                 continue
 
-            price_with_disc = record.get('priceWithDisc', 0) or 0
-            for_pay = record.get('forPay', 0) or 0
+            price_with_disc = record.get("priceWithDisc", 0) or 0
+            for_pay = record.get("forPay", 0) or 0
 
             total_sales_price_with_disc += price_with_disc
             total_sales_for_pay += for_pay
@@ -112,11 +111,11 @@ async def analyze_april_september_data():
             # Группировка по месяцам
             month_key = parsed_date[:7]  # YYYY-MM
             if month_key not in monthly_sales:
-                monthly_sales[month_key] = {'count': 0, 'price_with_disc': 0, 'for_pay': 0}
+                monthly_sales[month_key] = {"count": 0, "price_with_disc": 0, "for_pay": 0}
 
-            monthly_sales[month_key]['count'] += 1
-            monthly_sales[month_key]['price_with_disc'] += price_with_disc
-            monthly_sales[month_key]['for_pay'] += for_pay
+            monthly_sales[month_key]["count"] += 1
+            monthly_sales[month_key]["price_with_disc"] += price_with_disc
+            monthly_sales[month_key]["for_pay"] += for_pay
 
         logger.info(f"   Всего продаж (priceWithDisc): {total_sales_price_with_disc:,.0f} ₽")
         logger.info(f"   К перечислению (forPay): {total_sales_for_pay:,.0f} ₽")
@@ -127,7 +126,9 @@ async def analyze_april_september_data():
         logger.info("📈 ПОМЕСЯЧНАЯ РАЗБИВКА SALES:")
         for month in sorted(monthly_sales.keys()):
             data = monthly_sales[month]
-            logger.info(f"   {month}: {data['count']} шт, {data['price_with_disc']:,.0f} ₽ (priceWithDisc)")
+            logger.info(
+                f"   {month}: {data['count']} шт, {data['price_with_disc']:,.0f} ₽ (priceWithDisc)"
+            )
 
         logger.info("")
 
@@ -142,17 +143,17 @@ async def analyze_april_september_data():
 
         for record in orders_data:
             # Фильтруем по периоду
-            raw_date = record.get('date', '')
-            if 'T' in raw_date:
-                parsed_date = raw_date.split('T')[0]
+            raw_date = record.get("date", "")
+            if "T" in raw_date:
+                parsed_date = raw_date.split("T")[0]
             else:
                 parsed_date = raw_date[:10]
 
             if not (date_from <= parsed_date <= date_to):
                 continue
 
-            price_with_disc = record.get('priceWithDisc', 0) or 0
-            total_price = record.get('totalPrice', 0) or 0
+            price_with_disc = record.get("priceWithDisc", 0) or 0
+            total_price = record.get("totalPrice", 0) or 0
 
             total_orders_price_with_disc += price_with_disc
             total_orders_total_price += total_price
@@ -161,11 +162,11 @@ async def analyze_april_september_data():
             # Группировка по месяцам
             month_key = parsed_date[:7]
             if month_key not in monthly_orders:
-                monthly_orders[month_key] = {'count': 0, 'price_with_disc': 0, 'total_price': 0}
+                monthly_orders[month_key] = {"count": 0, "price_with_disc": 0, "total_price": 0}
 
-            monthly_orders[month_key]['count'] += 1
-            monthly_orders[month_key]['price_with_disc'] += price_with_disc
-            monthly_orders[month_key]['total_price'] += total_price
+            monthly_orders[month_key]["count"] += 1
+            monthly_orders[month_key]["price_with_disc"] += price_with_disc
+            monthly_orders[month_key]["total_price"] += total_price
 
         logger.info(f"   Всего заказов (priceWithDisc): {total_orders_price_with_disc:,.0f} ₽")
         logger.info(f"   Всего заказов (totalPrice): {total_orders_total_price:,.0f} ₽")
@@ -176,7 +177,9 @@ async def analyze_april_september_data():
         logger.info("📈 ПОМЕСЯЧНАЯ РАЗБИВКА ORDERS:")
         for month in sorted(monthly_orders.keys()):
             data = monthly_orders[month]
-            logger.info(f"   {month}: {data['count']} шт, {data['price_with_disc']:,.0f} ₽ (priceWithDisc)")
+            logger.info(
+                f"   {month}: {data['count']} шт, {data['price_with_disc']:,.0f} ₽ (priceWithDisc)"
+            )
 
         logger.info("")
 
@@ -188,14 +191,14 @@ async def analyze_april_september_data():
         sales_ratio = total_sales_price_with_disc / REAL_DELIVERED if REAL_DELIVERED > 0 else 0
         sales_diff = total_sales_price_with_disc - REAL_DELIVERED
 
-        logger.info(f"ВЫКУПЫ:")
+        logger.info("ВЫКУПЫ:")
         logger.info(f"   Система (priceWithDisc): {total_sales_price_with_disc:,.0f} ₽")
         logger.info(f"   Реальные данные WB: {REAL_DELIVERED:,.0f} ₽")
         logger.info(f"   Соотношение: {sales_ratio:.2f}x")
         logger.info(f"   Разница: {sales_diff:,.0f} ₽")
 
         if abs(sales_ratio - 1.0) < 0.1:
-            logger.info(f"   ✅ СООТВЕТСТВУЕТ (±10%)")
+            logger.info("   ✅ СООТВЕТСТВУЕТ (±10%)")
         elif sales_ratio > 1.2:
             logger.info(f"   ❌ ЗАВЫШЕНИЕ на {((sales_ratio - 1) * 100):.0f}%")
         else:
@@ -207,14 +210,14 @@ async def analyze_april_september_data():
         orders_ratio = total_orders_price_with_disc / REAL_ORDERS if REAL_ORDERS > 0 else 0
         orders_diff = total_orders_price_with_disc - REAL_ORDERS
 
-        logger.info(f"ЗАКАЗЫ:")
+        logger.info("ЗАКАЗЫ:")
         logger.info(f"   Система (priceWithDisc): {total_orders_price_with_disc:,.0f} ₽")
         logger.info(f"   Реальные данные WB: {REAL_ORDERS:,.0f} ₽")
         logger.info(f"   Соотношение: {orders_ratio:.2f}x")
         logger.info(f"   Разница: {orders_diff:,.0f} ₽")
 
         if abs(orders_ratio - 1.0) < 0.1:
-            logger.info(f"   ✅ СООТВЕТСТВУЕТ (±10%)")
+            logger.info("   ✅ СООТВЕТСТВУЕТ (±10%)")
         elif orders_ratio > 1.2:
             logger.info(f"   ❌ ЗАВЫШЕНИЕ на {((orders_ratio - 1) * 100):.0f}%")
         else:
@@ -238,14 +241,14 @@ async def analyze_april_september_data():
 
             sale_ids = []
             for record in sales_data:
-                raw_date = record.get('date', '')
-                if 'T' in raw_date:
-                    parsed_date = raw_date.split('T')[0]
+                raw_date = record.get("date", "")
+                if "T" in raw_date:
+                    parsed_date = raw_date.split("T")[0]
                 else:
                     parsed_date = raw_date[:10]
 
                 if date_from <= parsed_date <= date_to:
-                    sale_id = record.get('saleID', '')
+                    sale_id = record.get("saleID", "")
                     if sale_id:
                         sale_ids.append(sale_id)
 
@@ -257,25 +260,26 @@ async def analyze_april_september_data():
             logger.info(f"   Дубликатов: {duplicates_count}")
 
             if duplicates_count > 0:
-                logger.warning(f"   ⚠️  НАЙДЕНЫ ДУБЛИКАТЫ! Это может объяснять завышение")
+                logger.warning("   ⚠️  НАЙДЕНЫ ДУБЛИКАТЫ! Это может объяснять завышение")
             else:
-                logger.info(f"   ✅ Дубликатов не найдено")
+                logger.info("   ✅ Дубликатов не найдено")
 
         return {
-            'system_sales': total_sales_price_with_disc,
-            'system_orders': total_orders_price_with_disc,
-            'real_sales': REAL_DELIVERED,
-            'real_orders': REAL_ORDERS,
-            'sales_ratio': sales_ratio,
-            'orders_ratio': orders_ratio,
-            'delivered_count': delivered_count,
-            'orders_count': orders_count,
-            'duplicates_found': duplicates_count if 'duplicates_count' in locals() else 0
+            "system_sales": total_sales_price_with_disc,
+            "system_orders": total_orders_price_with_disc,
+            "real_sales": REAL_DELIVERED,
+            "real_orders": REAL_ORDERS,
+            "sales_ratio": sales_ratio,
+            "orders_ratio": orders_ratio,
+            "delivered_count": delivered_count,
+            "orders_count": orders_count,
+            "duplicates_found": duplicates_count if "duplicates_count" in locals() else 0,
         }
 
     except Exception as e:
         logger.error(f"❌ Ошибка анализа: {e}")
         return None
+
 
 if __name__ == "__main__":
     result = asyncio.run(analyze_april_september_data())

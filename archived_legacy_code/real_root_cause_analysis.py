@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""
-ЧЕСТНЫЙ АНАЛИЗ КОРНЕВЫХ ПРИЧИН
+"""ЧЕСТНЫЙ АНАЛИЗ КОРНЕВЫХ ПРИЧИН
 Поиск РЕАЛЬНЫХ причин завышения данных без подгонки коэффициентов
 """
 
 import asyncio
 import logging
-from api_chunking import ChunkedAPIManager
-import api_clients_main as api_clients
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+import api_clients_main as api_clients
+from api_chunking import ChunkedAPIManager
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 class RealRootCauseAnalyzer:
     """Анализатор реальных корневых причин без подгонки"""
@@ -20,7 +23,6 @@ class RealRootCauseAnalyzer:
 
     async def investigate_single_api_call(self):
         """Исследование одного API вызова для понимания РЕАЛЬНОЙ структуры данных"""
-
         logger.info("🔍 ИССЛЕДОВАНИЕ СЫРОГО API ОТВЕТА")
         logger.info("=" * 50)
 
@@ -55,19 +57,19 @@ class RealRootCauseAnalyzer:
                 # Группировка по товарам
                 products = {}
                 for sale in sales_data:
-                    nm_id = sale.get('nmId')
+                    nm_id = sale.get("nmId")
                     if nm_id:
                         if nm_id not in products:
                             products[nm_id] = []
                         products[nm_id].append(sale)
 
-                logger.info(f"\n📦 АНАЛИЗ ПО ТОВАРАМ:")
+                logger.info("\n📦 АНАЛИЗ ПО ТОВАРАМ:")
                 logger.info(f"Уникальных товаров: {len(products)}")
 
                 for nm_id, sales in list(products.items())[:3]:
                     logger.info(f"\n🏷️ Товар {nm_id}:")
                     logger.info(f"  Продаж: {len(sales)}")
-                    total_price = sum(s.get('priceWithDisc', 0) for s in sales)
+                    total_price = sum(s.get("priceWithDisc", 0) for s in sales)
                     logger.info(f"  Общая сумма: {total_price:,.0f} ₽")
                     avg_price = total_price / len(sales) if sales else 0
                     logger.info(f"  Средняя цена: {avg_price:,.0f} ₽")
@@ -94,10 +96,10 @@ class RealRootCauseAnalyzer:
                     logger.info(f"  totalPrice: {order.get('totalPrice', 0)}")
 
             return {
-                'sales_count': len(sales_data) if sales_data else 0,
-                'orders_count': len(orders_data) if orders_data else 0,
-                'sales_sample': sales_data[:3] if sales_data else [],
-                'orders_sample': orders_data[:3] if orders_data else []
+                "sales_count": len(sales_data) if sales_data else 0,
+                "orders_count": len(orders_data) if orders_data else 0,
+                "sales_sample": sales_data[:3] if sales_data else [],
+                "orders_sample": orders_data[:3] if orders_data else [],
             }
 
         except Exception as e:
@@ -106,7 +108,6 @@ class RealRootCauseAnalyzer:
 
     def analyze_real_business_logic(self):
         """Анализ того, что РЕАЛЬНО означают API данные"""
-
         logger.info("\n🤔 АНАЛИЗ РЕАЛЬНОЙ БИЗНЕС-ЛОГИКИ")
         logger.info("=" * 50)
 
@@ -127,7 +128,6 @@ class RealRootCauseAnalyzer:
 
     async def compare_with_wb_cabinet_data(self):
         """Сравнение с данными из личного кабинета WB"""
-
         logger.info("\n📱 СРАВНЕНИЕ С ЛИЧНЫМ КАБИНЕТОМ WB")
         logger.info("=" * 50)
 
@@ -149,9 +149,9 @@ class RealRootCauseAnalyzer:
         logger.info("Найти ТОЧНОЕ соответствие между API и кабинетом")
         logger.info("Понять откуда берется завышение в 10 раз")
 
+
 async def main():
     """Основная функция честного анализа"""
-
     analyzer = RealRootCauseAnalyzer()
 
     logger.info("🚨 ЧЕСТНЫЙ АНАЛИЗ КОРНЕВЫХ ПРИЧИН")
@@ -173,6 +173,7 @@ async def main():
     logger.info("4. Исправить КОРНЕВУЮ ПРИЧИНУ")
 
     return api_data
+
 
 if __name__ == "__main__":
     result = asyncio.run(main())

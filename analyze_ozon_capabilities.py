@@ -1,27 +1,24 @@
 #!/usr/bin/env python3
-"""
-АНАЛИЗ ВОЗМОЖНОСТЕЙ OZON API
+"""АНАЛИЗ ВОЗМОЖНОСТЕЙ OZON API
 Определяем максимальные периоды и оптимальные задержки для Ozon
 """
 
-import asyncio
 import logging
-from datetime import datetime, timedelta
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 def analyze_ozon_api_capabilities():
     """Анализ возможностей Ozon API"""
-
     logger.info("🟦 АНАЛИЗ ВОЗМОЖНОСТЕЙ OZON API")
     logger.info("=" * 60)
 
     # Параметры Ozon API из системы
     OZON_CHUNK_SIZES = {
-        'ozon_fbo': 60,  # дней на чанк
-        'ozon_fbs': 60,  # дней на чанк
-        'ozon_advertising': 60  # дней на чанк
+        "ozon_fbo": 60,  # дней на чанк
+        "ozon_fbs": 60,  # дней на чанк
+        "ozon_advertising": 60,  # дней на чанк
     }
 
     logger.info("📋 ТЕХНИЧЕСКИЕ ХАРАКТЕРИСТИКИ OZON API:")
@@ -39,14 +36,14 @@ def analyze_ozon_api_capabilities():
         (120, "4 месяца"),
         (90, "3 месяца"),
         (60, "2 месяца"),
-        (30, "1 месяц")
+        (30, "1 месяц"),
     ]
 
     logger.info("🔢 РАСЧЕТЫ ДЛЯ OZON API:")
     logger.info("")
 
     # Для основных транзакций используем FBS (он содержит все данные)
-    chunk_size = OZON_CHUNK_SIZES['ozon_fbs']
+    chunk_size = OZON_CHUNK_SIZES["ozon_fbs"]
     apis_per_chunk = 1  # Только FBS API (FBO дублируется в FBS)
 
     results = []
@@ -81,15 +78,17 @@ def analyze_ozon_api_capabilities():
         else:
             complexity = "ОЧЕНЬ СЛОЖНАЯ"
 
-        results.append({
-            'days': days,
-            'description': description,
-            'chunks': chunks_needed,
-            'requests': total_requests,
-            'delay': delay,
-            'time_minutes': processing_time_minutes,
-            'complexity': complexity
-        })
+        results.append(
+            {
+                "days": days,
+                "description": description,
+                "chunks": chunks_needed,
+                "requests": total_requests,
+                "delay": delay,
+                "time_minutes": processing_time_minutes,
+                "complexity": complexity,
+            }
+        )
 
         logger.info(f"📅 {description:15s} ({days:3d} дней):")
         logger.info(f"   Чанков: {chunks_needed:2d}")
@@ -104,7 +103,7 @@ def analyze_ozon_api_capabilities():
     logger.info("")
 
     # Расчет для года
-    year_result = next(r for r in results if r['days'] == 365)
+    year_result = next(r for r in results if r["days"] == 365)
 
     # WB для года (обновленные параметры)
     wb_chunks_year = (365 + 45 - 1) // 45  # 9 чанков
@@ -112,14 +111,18 @@ def analyze_ozon_api_capabilities():
     wb_delay_year = 8.0  # Новая задержка для года
     wb_time_year = (wb_requests_year * wb_delay_year) / 60
 
-    logger.info(f"📊 ГОД (365 дней):")
-    logger.info(f"   OZON: {year_result['chunks']} чанков, {year_result['requests']} запросов, {year_result['time_minutes']:.1f} мин")
-    logger.info(f"   WB:   {wb_chunks_year} чанков, {wb_requests_year} запросов, {wb_time_year:.1f} мин")
+    logger.info("📊 ГОД (365 дней):")
+    logger.info(
+        f"   OZON: {year_result['chunks']} чанков, {year_result['requests']} запросов, {year_result['time_minutes']:.1f} мин"
+    )
+    logger.info(
+        f"   WB:   {wb_chunks_year} чанков, {wb_requests_year} запросов, {wb_time_year:.1f} мин"
+    )
     logger.info("")
 
-    if year_result['time_minutes'] < wb_time_year:
+    if year_result["time_minutes"] < wb_time_year:
         logger.info("✅ OZON БЫСТРЕЕ для годовых периодов!")
-        ozon_advantage = wb_time_year - year_result['time_minutes']
+        ozon_advantage = wb_time_year - year_result["time_minutes"]
         logger.info(f"   Преимущество: {ozon_advantage:.1f} минут")
     else:
         logger.info("⚠️  WB быстрее для годовых периодов")
@@ -130,11 +133,11 @@ def analyze_ozon_api_capabilities():
     logger.info("🎯 РЕКОМЕНДУЕМЫЕ ЗАДЕРЖКИ ДЛЯ OZON:")
     logger.info("")
     for result in results:
-        if result['complexity'] == "ПРОСТАЯ":
+        if result["complexity"] == "ПРОСТАЯ":
             status = "✅ ОПТИМАЛЬНО"
-        elif result['complexity'] == "СРЕДНЯЯ":
+        elif result["complexity"] == "СРЕДНЯЯ":
             status = "🔶 ХОРОШО"
-        elif result['complexity'] == "СЛОЖНАЯ":
+        elif result["complexity"] == "СЛОЖНАЯ":
             status = "⚠️  ОСТОРОЖНО"
         else:
             status = "❌ ИЗБЕГАТЬ"
@@ -162,7 +165,9 @@ def analyze_ozon_api_capabilities():
     logger.info("✅ ИТОГОВЫЕ РЕКОМЕНДАЦИИ:")
     logger.info("")
     logger.info("   🟦 OZON:")
-    logger.info(f"     Максимум: {year_result['days']} дней ({year_result['time_minutes']:.1f} мин)")
+    logger.info(
+        f"     Максимум: {year_result['days']} дней ({year_result['time_minutes']:.1f} мин)"
+    )
     logger.info(f"     Оптимум: 120 дней (2 чанка, ~{results[3]['time_minutes']:.1f} мин)")
     logger.info("")
     logger.info("   🟣 WB:")
@@ -171,35 +176,35 @@ def analyze_ozon_api_capabilities():
 
     return results
 
+
 def generate_optimized_delays_config():
     """Генерация оптимизированной конфигурации задержек"""
-
     logger.info("\n🔧 ОПТИМИЗИРОВАННАЯ КОНФИГУРАЦИЯ ЗАДЕРЖЕК")
     logger.info("=" * 60)
 
     config = {
-        'wb_delays': {
-            'year_plus': {'days': '300+', 'delay': 8.0, 'description': 'Годовые периоды'},
-            'half_year': {'days': '180-300', 'delay': 5.0, 'description': 'Полугодовые периоды'},
-            'quarter': {'days': '90-180', 'delay': 3.5, 'description': 'Квартальные периоды'},
-            'month': {'days': '30-90', 'delay': 2.5, 'description': 'Месячные периоды'},
-            'short': {'days': '1-30', 'delay': 2.0, 'description': 'Короткие периоды'}
+        "wb_delays": {
+            "year_plus": {"days": "300+", "delay": 8.0, "description": "Годовые периоды"},
+            "half_year": {"days": "180-300", "delay": 5.0, "description": "Полугодовые периоды"},
+            "quarter": {"days": "90-180", "delay": 3.5, "description": "Квартальные периоды"},
+            "month": {"days": "30-90", "delay": 2.5, "description": "Месячные периоды"},
+            "short": {"days": "1-30", "delay": 2.0, "description": "Короткие периоды"},
         },
-        'ozon_delays': {
-            'year_plus': {'days': '300+', 'delay': 4.0, 'description': 'Годовые периоды'},
-            'half_year': {'days': '180-300', 'delay': 3.0, 'description': 'Полугодовые периоды'},
-            'quarter': {'days': '90-180', 'delay': 2.5, 'description': 'Квартальные периоды'},
-            'short': {'days': '1-90', 'delay': 2.0, 'description': 'Короткие периоды'}
-        }
+        "ozon_delays": {
+            "year_plus": {"days": "300+", "delay": 4.0, "description": "Годовые периоды"},
+            "half_year": {"days": "180-300", "delay": 3.0, "description": "Полугодовые периоды"},
+            "quarter": {"days": "90-180", "delay": 2.5, "description": "Квартальные периоды"},
+            "short": {"days": "1-90", "delay": 2.0, "description": "Короткие периоды"},
+        },
     }
 
     logger.info("📋 WB API ЗАДЕРЖКИ:")
-    for key, value in config['wb_delays'].items():
+    for key, value in config["wb_delays"].items():
         logger.info(f"   {value['description']:20s}: {value['delay']:.1f}s ({value['days']} дней)")
 
     logger.info("")
     logger.info("📋 OZON API ЗАДЕРЖКИ:")
-    for key, value in config['ozon_delays'].items():
+    for key, value in config["ozon_delays"].items():
         logger.info(f"   {value['description']:20s}: {value['delay']:.1f}s ({value['days']} дней)")
 
     logger.info("")
@@ -210,6 +215,7 @@ def generate_optimized_delays_config():
     logger.info("   • Год возможен, но требует терпения")
 
     return config
+
 
 if __name__ == "__main__":
     # Анализируем Ozon

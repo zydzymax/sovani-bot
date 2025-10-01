@@ -1,0 +1,59 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = ["docs", "scripts", "tma", ".venv", "venv", "build", "dist", "migrations"]
+
+[tool.ruff.lint]
+# включаем pydocstyle в мягком режиме
+select = ["E", "F", "W", "I", "B", "UP", "RUF", "C90", "PL", "N", "D"]
+extend-select = ["I", "UP", "RUF", "B", "C90", "PL", "N"]
+ignore = [
+  "E501",   # длину строк контролируем, но не ломаем старый код
+  "PLR0913", # много аргументов в функциях допустимо в хендлерах
+  "D104","D105","D203","D213","D401"
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-q"
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+filterwarnings = [
+  "ignore::DeprecationWarning",
+]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unused_configs = true
+no_implicit_optional = true
+strict_optional = false
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+exclude = "(^docs/|^scripts/|^tma/|^migrations/)"
+
+[tool.coverage.run]
+branch = true
+source = ["app"]
+omit = ["tests/*", "scripts/*", "migrations/*"]
+
+[tool.coverage.report]
+skip_covered = true
+show_missing = true

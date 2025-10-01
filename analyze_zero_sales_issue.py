@@ -1,17 +1,19 @@
 #!/usr/bin/env python3
-"""
-Анализ проблемы с нулевыми продажами на коротких периодах
-"""
+"""Анализ проблемы с нулевыми продажами на коротких периодах"""
 
 import asyncio
 import logging
 from datetime import datetime, timedelta
-from api_chunking import ChunkedAPIManager
+
 import api_clients_main as api_clients
+from api_chunking import ChunkedAPIManager
 
 # Настройка логирования
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 class ZeroSalesAnalyzer:
     """Анализатор проблемы с нулевыми продажами"""
@@ -21,7 +23,6 @@ class ZeroSalesAnalyzer:
 
     async def analyze_sales_timeline(self):
         """Анализ временной линии продаж"""
-
         logger.info("🔍 АНАЛИЗ ВРЕМЕННОЙ ЛИНИИ ПРОДАЖ")
         logger.info("=" * 50)
 
@@ -29,11 +30,27 @@ class ZeroSalesAnalyzer:
         today = datetime(2025, 9, 28)
 
         periods_to_test = [
-            ("today", today.strftime('%Y-%m-%d'), today.strftime('%Y-%m-%d')),
-            ("yesterday", (today - timedelta(days=1)).strftime('%Y-%m-%d'), (today - timedelta(days=1)).strftime('%Y-%m-%d')),
-            ("2_days_ago", (today - timedelta(days=2)).strftime('%Y-%m-%d'), (today - timedelta(days=2)).strftime('%Y-%m-%d')),
-            ("3_days_ago", (today - timedelta(days=3)).strftime('%Y-%m-%d'), (today - timedelta(days=3)).strftime('%Y-%m-%d')),
-            ("last_week", (today - timedelta(days=7)).strftime('%Y-%m-%d'), (today - timedelta(days=7)).strftime('%Y-%m-%d')),
+            ("today", today.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")),
+            (
+                "yesterday",
+                (today - timedelta(days=1)).strftime("%Y-%m-%d"),
+                (today - timedelta(days=1)).strftime("%Y-%m-%d"),
+            ),
+            (
+                "2_days_ago",
+                (today - timedelta(days=2)).strftime("%Y-%m-%d"),
+                (today - timedelta(days=2)).strftime("%Y-%m-%d"),
+            ),
+            (
+                "3_days_ago",
+                (today - timedelta(days=3)).strftime("%Y-%m-%d"),
+                (today - timedelta(days=3)).strftime("%Y-%m-%d"),
+            ),
+            (
+                "last_week",
+                (today - timedelta(days=7)).strftime("%Y-%m-%d"),
+                (today - timedelta(days=7)).strftime("%Y-%m-%d"),
+            ),
             ("september_start", "2025-09-01", "2025-09-07"),
             ("january_known_good", "2025-01-01", "2025-01-07"),
         ]
@@ -53,12 +70,12 @@ class ZeroSalesAnalyzer:
                 orders_count = len(orders_data) if orders_data else 0
 
                 results[name] = {
-                    'date_from': date_from,
-                    'date_to': date_to,
-                    'sales_count': sales_count,
-                    'orders_count': orders_count,
-                    'has_sales': sales_count > 0,
-                    'has_orders': orders_count > 0
+                    "date_from": date_from,
+                    "date_to": date_to,
+                    "sales_count": sales_count,
+                    "orders_count": orders_count,
+                    "has_sales": sales_count > 0,
+                    "has_orders": orders_count > 0,
                 }
 
                 status_sales = "✅" if sales_count > 0 else "❌"
@@ -70,19 +87,19 @@ class ZeroSalesAnalyzer:
                 # Анализ первых записей
                 if sales_data and len(sales_data) > 0:
                     first_sale = sales_data[0]
-                    logger.info(f"   📊 Первая продажа: {first_sale.get('date', 'N/A')} - {first_sale.get('priceWithDisc', 0)}₽")
+                    logger.info(
+                        f"   📊 Первая продажа: {first_sale.get('date', 'N/A')} - {first_sale.get('priceWithDisc', 0)}₽"
+                    )
 
                 if orders_data and len(orders_data) > 0:
                     first_order = orders_data[0]
-                    logger.info(f"   📊 Первый заказ: {first_order.get('date', 'N/A')} - {first_order.get('priceWithDisc', 0)}₽")
+                    logger.info(
+                        f"   📊 Первый заказ: {first_order.get('date', 'N/A')} - {first_order.get('priceWithDisc', 0)}₽"
+                    )
 
             except Exception as e:
                 logger.error(f"   ❌ Ошибка: {e}")
-                results[name] = {
-                    'date_from': date_from,
-                    'date_to': date_to,
-                    'error': str(e)
-                }
+                results[name] = {"date_from": date_from, "date_to": date_to, "error": str(e)}
 
             # Пауза между запросами
             await asyncio.sleep(2)
@@ -91,13 +108,20 @@ class ZeroSalesAnalyzer:
 
     def analyze_sales_lag_hypothesis(self, results):
         """Анализ гипотезы о лаге в продажах"""
-
         logger.info("\n🔍 АНАЛИЗ ГИПОТЕЗЫ О ЛАГЕ В ПРОДАЖАХ")
         logger.info("=" * 50)
 
         # Ищем паттерны в данных
-        has_recent_sales = any(r.get('has_sales', False) for name, r in results.items() if 'today' in name or 'yesterday' in name)
-        has_older_sales = any(r.get('has_sales', False) for name, r in results.items() if 'ago' in name or 'january' in name)
+        has_recent_sales = any(
+            r.get("has_sales", False)
+            for name, r in results.items()
+            if "today" in name or "yesterday" in name
+        )
+        has_older_sales = any(
+            r.get("has_sales", False)
+            for name, r in results.items()
+            if "ago" in name or "january" in name
+        )
 
         logger.info(f"Продажи за последние дни: {'✅' if has_recent_sales else '❌'}")
         logger.info(f"Продажи за более старые периоды: {'✅' if has_older_sales else '❌'}")
@@ -113,7 +137,6 @@ class ZeroSalesAnalyzer:
 
     async def get_sales_api_documentation(self):
         """Анализ документации Sales API"""
-
         logger.info("\n📚 АНАЛИЗ ОСОБЕННОСТЕЙ WB SALES API")
         logger.info("=" * 50)
 
@@ -134,9 +157,9 @@ class ZeroSalesAnalyzer:
         logger.info("2. Для исторических данных (>3 дней) использовать Sales API")
         logger.info("3. Добавить гибридный подход: Orders + Sales")
 
+
 async def main():
     """Основная функция анализа"""
-
     analyzer = ZeroSalesAnalyzer()
 
     logger.info("🚨 АНАЛИЗ ПРОБЛЕМЫ С НУЛЕВЫМИ ПРОДАЖАМИ")
@@ -153,6 +176,7 @@ async def main():
     logger.info("\n🎉 АНАЛИЗ ЗАВЕРШЕН!")
 
     return results
+
 
 if __name__ == "__main__":
     results = asyncio.run(main())

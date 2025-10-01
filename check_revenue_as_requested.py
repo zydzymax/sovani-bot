@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Проверка WB API за период 2025-08-16 → 2025-09-15
+"""Проверка WB API за период 2025-08-16 → 2025-09-15
 Ожидаемая выручка: ~72,105 ₽
 
 И аналогично для Ozon - проверка данных за тот же период
@@ -9,10 +8,11 @@
 По примеру пользователя из задания.
 """
 
-from api_clients.wb.stats_client import WBStatsClient
-from api_clients.ozon.sales_client import OzonSalesClient
-from datetime import date
 import asyncio
+from datetime import date
+
+from api_clients.ozon.sales_client import OzonSalesClient
+from api_clients.wb.stats_client import WBStatsClient
 
 
 async def check_wb_real_data():
@@ -23,7 +23,7 @@ async def check_wb_real_data():
     total_revenue = 0
     for sale in sales:
         # WB API возвращает forPay как итоговую выручку
-        total_revenue += sale.get('forPay', 0)
+        total_revenue += sale.get("forPay", 0)
 
     print(f"WB реальная выручка: {total_revenue:.2f} ₽")
     print(f"Количество продаж: {len(sales)}")
@@ -36,16 +36,14 @@ async def check_ozon_real_data():
 
     # Используем Analytics API для получения выручки
     analytics_data = await client.get_analytics_data(
-        date(2025, 8, 16),
-        date(2025, 9, 15),
-        ['revenue']
+        date(2025, 8, 16), date(2025, 9, 15), ["revenue"]
     )
 
     total_revenue = 0.0
-    data_rows = analytics_data.get('result', {}).get('data', [])
+    data_rows = analytics_data.get("result", {}).get("data", [])
 
     for row in data_rows:
-        metrics = row.get('metrics', [])
+        metrics = row.get("metrics", [])
         if metrics:
             revenue = float(metrics[0] or 0)
             total_revenue += revenue
@@ -58,7 +56,7 @@ async def check_ozon_real_data():
 async def main():
     """Основная функция проверки"""
     print("🔍 Проверяем WB и Ozon API за период 2025-08-16 → 2025-09-15")
-    print("="*60)
+    print("=" * 60)
 
     print("\n📊 WB API ПРОВЕРКА:")
     print("-" * 30)
@@ -99,7 +97,7 @@ async def main():
         ozon_revenue = 0
 
     print("\n📈 ИТОГОВЫЕ РЕЗУЛЬТАТЫ:")
-    print("="*60)
+    print("=" * 60)
     print(f"WB итоговая выручка:   {wb_revenue:>12,.2f} ₽")
     print(f"Ozon итоговая выручка: {ozon_revenue:>12,.2f} ₽")
     print(f"{'─' * 40}")

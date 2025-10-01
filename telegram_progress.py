@@ -1,13 +1,11 @@
-"""
-Продвинутый прогресс-бар для Telegram с визуализацией этапов обработки
-"""
-import asyncio
+"""Продвинутый прогресс-бар для Telegram с визуализацией этапов обработки"""
+
 import logging
-from typing import Dict, Any, Optional, List
-from datetime import datetime, timedelta
-from aiogram import types
 from dataclasses import dataclass
-import math
+from datetime import datetime
+from typing import Any
+
+from aiogram import types
 
 logger = logging.getLogger(__name__)
 
@@ -42,18 +40,12 @@ class TelegramProgressManager:
         self._update_intervals = {}
 
     async def create_progress_message(
-        self,
-        chat: types.Chat,
-        initial_text: str = "🚀 Начинаю обработку данных..."
+        self, chat: types.Chat, initial_text: str = "🚀 Начинаю обработку данных..."
     ) -> types.Message:
         """Создание начального сообщения прогресса"""
         from bot import bot  # Импорт должен быть внутри функции
 
-        message = await bot.send_message(
-            chat.id,
-            initial_text,
-            parse_mode='Markdown'
-        )
+        message = await bot.send_message(chat.id, initial_text, parse_mode="Markdown")
 
         return message
 
@@ -65,10 +57,9 @@ class TelegramProgressManager:
         total_stages: int,
         stage_progress: int = 0,
         stage_total: int = 100,
-        details: Dict[str, Any] = None
+        details: dict[str, Any] = None,
     ):
         """Обновление прогресса этапа с визуализацией"""
-
         # Общий прогресс по этапам
         overall_progress = ProgressBar(stage_number - 1, total_stages)
 
@@ -80,7 +71,7 @@ class TelegramProgressManager:
             1: "📋",  # Инициализация
             2: "🟣",  # WB
             3: "🔵",  # Ozon
-            4: "🔢"   # Агрегация
+            4: "🔢",  # Агрегация
         }
 
         stage_emoji = stage_emojis.get(stage_number, "⚡")
@@ -91,21 +82,21 @@ class TelegramProgressManager:
             "",
             f"🔄 Общий прогресс: {overall_progress.render()}",
             f"⚡ Текущий этап: {current_stage_progress.render()}",
-            ""
+            "",
         ]
 
         # Добавляем детали если есть
         if details:
             for key, value in details.items():
-                if key == 'current_chunk':
+                if key == "current_chunk":
                     text_lines.append(f"📅 Период: {value}")
-                elif key == 'chunks_processed':
+                elif key == "chunks_processed":
                     text_lines.append(f"📊 Обработано: {value}")
-                elif key == 'estimated_time':
+                elif key == "estimated_time":
                     text_lines.append(f"⏱️ Осталось: ~{value} мин")
-                elif key == 'throughput':
+                elif key == "throughput":
                     text_lines.append(f"🚀 Скорость: {value}")
-                elif key == 'errors':
+                elif key == "errors":
                     text_lines.append(f"⚠️ Ошибок: {value}")
 
         # Добавляем время
@@ -114,7 +105,7 @@ class TelegramProgressManager:
         text = "\\n".join(text_lines)
 
         try:
-            await message.edit_text(text, parse_mode='Markdown')
+            await message.edit_text(text, parse_mode="Markdown")
         except Exception as e:
             if "message is not modified" not in str(e).lower():
                 logger.error(f"Ошибка обновления прогресса: {e}")
@@ -129,10 +120,9 @@ class TelegramProgressManager:
         orders_count: int = 0,
         sales_count: int = 0,
         advertising_spend: float = 0,
-        start_time: datetime = None
+        start_time: datetime = None,
     ):
         """Специализированное обновление для обработки WB"""
-
         # Рассчитываем время
         elapsed_time = ""
         estimated_remaining = ""
@@ -173,7 +163,7 @@ class TelegramProgressManager:
 🔄 Получаю данные из API..."""
 
         try:
-            await message.edit_text(text, parse_mode='Markdown')
+            await message.edit_text(text, parse_mode="Markdown")
         except Exception as e:
             if "message is not modified" not in str(e).lower():
                 logger.error(f"Ошибка обновления WB прогресса: {e}")
@@ -188,10 +178,9 @@ class TelegramProgressManager:
         fbo_count: int = 0,
         fbs_count: int = 0,
         revenue: float = 0,
-        start_time: datetime = None
+        start_time: datetime = None,
     ):
         """Специализированное обновление для обработки Ozon"""
-
         # Рассчитываем время
         elapsed_time = ""
         estimated_remaining = ""
@@ -232,26 +221,22 @@ class TelegramProgressManager:
 🔄 Получаю транзакции..."""
 
         try:
-            await message.edit_text(text, parse_mode='Markdown')
+            await message.edit_text(text, parse_mode="Markdown")
         except Exception as e:
             if "message is not modified" not in str(e).lower():
                 logger.error(f"Ошибка обновления Ozon прогресса: {e}")
 
     async def show_final_results(
-        self,
-        message: types.Message,
-        result: Dict[str, Any],
-        processing_time_minutes: float
+        self, message: types.Message, result: dict[str, Any], processing_time_minutes: float
     ):
         """Показ финальных результатов с красивым форматированием"""
-
         # Извлекаем данные
-        total_revenue = result.get('total_revenue', 0)
-        total_units = result.get('total_units', 0)
-        net_profit = result.get('net_profit', 0)
+        total_revenue = result.get("total_revenue", 0)
+        total_units = result.get("total_units", 0)
+        net_profit = result.get("net_profit", 0)
 
-        wb_data = result.get('wb_data', {})
-        ozon_data = result.get('ozon_data', {})
+        wb_data = result.get("wb_data", {})
+        ozon_data = result.get("ozon_data", {})
 
         # Рассчитываем метрики
         profit_margin = (net_profit / total_revenue * 100) if total_revenue > 0 else 0
@@ -284,7 +269,7 @@ class TelegramProgressManager:
 🔥 Данные получены из реальных API!"""
 
         try:
-            await message.edit_text(text, parse_mode='Markdown')
+            await message.edit_text(text, parse_mode="Markdown")
         except Exception as e:
             logger.error(f"Ошибка показа финальных результатов: {e}")
 
@@ -293,10 +278,9 @@ class TelegramProgressManager:
         message: types.Message,
         error: str,
         stage: str = "обработки",
-        retry_available: bool = False
+        retry_available: bool = False,
     ):
         """Показ сообщения об ошибке"""
-
         text = f"""❌ **ОШИБКА {stage.upper()}**
 
 🚫 Произошла ошибка во время {stage}:
@@ -308,39 +292,39 @@ class TelegramProgressManager:
 {'🔄 Попробуйте повторить запрос' if retry_available else ''}"""
 
         try:
-            await message.edit_text(text, parse_mode='Markdown')
+            await message.edit_text(text, parse_mode="Markdown")
         except Exception as e:
             logger.error(f"Ошибка показа сообщения об ошибке: {e}")
 
-    def create_status_summary(self, stats: Dict[str, Any]) -> str:
+    def create_status_summary(self, stats: dict[str, Any]) -> str:
         """Создание краткой сводки статуса"""
-
         lines = ["📊 **СТАТУС СИСТЕМЫ:**", ""]
 
-        if 'cache_stats' in stats:
-            cache = stats['cache_stats']
-            lines.extend([
-                f"💾 Кеш: {cache.get('total_chunks', 0)} чанков",
-                f"🟣 WB кеш: {cache.get('wb_chunks', 0)}",
-                f"🔵 Ozon кеш: {cache.get('ozon_chunks', 0)}",
-                ""
-            ])
+        if "cache_stats" in stats:
+            cache = stats["cache_stats"]
+            lines.extend(
+                [
+                    f"💾 Кеш: {cache.get('total_chunks', 0)} чанков",
+                    f"🟣 WB кеш: {cache.get('wb_chunks', 0)}",
+                    f"🔵 Ozon кеш: {cache.get('ozon_chunks', 0)}",
+                    "",
+                ]
+            )
 
-        if 'active_jobs' in stats:
-            jobs = stats['active_jobs']
-            lines.extend([
-                f"⚡ Активных задач: {len(jobs)}",
-                ""
-            ])
+        if "active_jobs" in stats:
+            jobs = stats["active_jobs"]
+            lines.extend([f"⚡ Активных задач: {len(jobs)}", ""])
 
-        if 'performance' in stats:
-            perf = stats['performance']
-            lines.extend([
-                f"🚀 Производительность:",
-                f"• API запросов/мин: {perf.get('requests_per_minute', 0)}",
-                f"• Средн. время чанка: {perf.get('avg_chunk_time', 0):.1f}с",
-                ""
-            ])
+        if "performance" in stats:
+            perf = stats["performance"]
+            lines.extend(
+                [
+                    "🚀 Производительность:",
+                    f"• API запросов/мин: {perf.get('requests_per_minute', 0)}",
+                    f"• Средн. время чанка: {perf.get('avg_chunk_time', 0):.1f}с",
+                    "",
+                ]
+            )
 
         lines.append(f"🕐 {datetime.now().strftime('%H:%M:%S')}")
 

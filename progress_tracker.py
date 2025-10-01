@@ -1,13 +1,13 @@
-"""
-Система отслеживания прогресса обработки больших периодов данных
-"""
+"""Система отслеживания прогресса обработки больших периодов данных"""
+
 import json
 import logging
-from typing import Dict, Any, List, Optional
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-import redis
-from dataclasses import dataclass, asdict
 from enum import Enum
+from typing import Any
+
+import redis
 
 logger = logging.getLogger(__name__)
 
@@ -36,10 +36,10 @@ class ChunkProgress:
     date_from: str
     date_to: str
     status: str
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
-    error_message: Optional[str] = None
-    result_data: Optional[Dict] = None
+    started_at: str | None = None
+    completed_at: str | None = None
+    error_message: str | None = None
+    result_data: dict | None = None
 
 
 @dataclass
@@ -50,14 +50,14 @@ class JobProgress:
     date_to: str
     telegram_chat_id: int
     created_at: str
-    started_at: Optional[str] = None
-    completed_at: Optional[str] = None
+    started_at: str | None = None
+    completed_at: str | None = None
     total_wb_chunks: int = 0
     total_ozon_chunks: int = 0
     completed_wb_chunks: int = 0
     completed_ozon_chunks: int = 0
-    error_message: Optional[str] = None
-    final_result: Optional[Dict] = None
+    error_message: str | None = None
+    final_result: dict | None = None
 
 
 class ProgressTracker:
@@ -68,7 +68,9 @@ class ProgressTracker:
         self.job_prefix = "job:"
         self.chunk_prefix = "chunk:"
 
-    def initialize_job(self, job_id: str, date_from: str, date_to: str, telegram_chat_id: int) -> JobProgress:
+    def initialize_job(
+        self, job_id: str, date_from: str, date_to: str, telegram_chat_id: int
+    ) -> JobProgress:
         """Инициализация новой задачи"""
         try:
             job = JobProgress(
@@ -77,7 +79,7 @@ class ProgressTracker:
                 date_from=date_from,
                 date_to=date_to,
                 telegram_chat_id=telegram_chat_id,
-                created_at=datetime.now().isoformat()
+                created_at=datetime.now().isoformat(),
             )
 
             # Сохраняем в Redis
@@ -91,7 +93,7 @@ class ProgressTracker:
             logger.error(f"Ошибка инициализации задачи {job_id}: {e}")
             raise
 
-    def get_job_progress(self, job_id: str) -> Optional[JobProgress]:
+    def get_job_progress(self, job_id: str) -> JobProgress | None:
         """Получение прогресса задачи"""
         try:
             job_key = f"{self.job_prefix}{job_id}"
@@ -134,8 +136,8 @@ class ProgressTracker:
         chunk_index: int,
         platform: str,
         status: str,
-        result_data: Optional[Dict] = None,
-        error_message: Optional[str] = None
+        result_data: dict | None = None,
+        error_message: str | None = None,
     ):
         """Обновление прогресса обработки чанка"""
         try:
@@ -151,8 +153,8 @@ class ProgressTracker:
                     chunk_id=chunk_id,
                     platform=platform,
                     date_from="",  # Будет обновлено
-                    date_to="",    # Будет обновлено
-                    status=status
+                    date_to="",  # Будет обновлено
+                    status=status,
                 )
 
             # Обновляем статус
@@ -185,16 +187,16 @@ class ProgressTracker:
             return
 
         if status == ChunkStatus.COMPLETED.value:
-            if platform == 'wb':
+            if platform == "wb":
                 job.completed_wb_chunks += 1
-            elif platform == 'ozon':
+            elif platform == "ozon":
                 job.completed_ozon_chunks += 1
 
         # Сохраняем обновленную задачу
         job_key = f"{self.job_prefix}{job_id}"
         self.redis_client.setex(job_key, 7 * 24 * 3600, json.dumps(asdict(job)))
 
-    def get_completed_chunks(self, job_id: str, platform: str) -> List[Dict]:
+    def get_completed_chunks(self, job_id: str, platform: str) -> list[dict]:
         """Получение всех завершенных чанков для платформы"""
         try:
             pattern = f"{self.chunk_prefix}{job_id}_{platform}_*"
@@ -205,7 +207,9 @@ class ProgressTracker:
                 chunk_data = self.redis_client.get(key)
                 if chunk_data:
                     chunk = json.loads(chunk_data)
-                    if chunk.get('status') == ChunkStatus.COMPLETED.value and chunk.get('result_data'):
+                    if chunk.get("status") == ChunkStatus.COMPLETED.value and chunk.get(
+                        "result_data"
+                    ):
                         completed_chunks.append(chunk)
 
             return completed_chunks
@@ -214,69 +218,69 @@ class ProgressTracker:
             logger.error(f"Ошибка получения завершенных чанков для {job_id}-{platform}: {e}")
             return []
 
-    def get_job_statistics(self, job_id: str) -> Dict[str, Any]:
+    def get_job_statistics(self, job_id: str) -> dict[str, Any]:
         """Получение детальной статистики задачи"""
         try:
             job = self.get_job_progress(job_id)
             if not job:
-                return {'error': 'Job not found'}
+                return {"error": "Job not found"}
 
             # Получаем все чанки задачи
             pattern = f"{self.chunk_prefix}{job_id}_*"
             chunk_keys = self.redis_client.keys(pattern)
 
             chunk_stats = {
-                'total_chunks': len(chunk_keys),
-                'completed_chunks': 0,
-                'failed_chunks': 0,
-                'processing_chunks': 0,
-                'wb_chunks': 0,
-                'ozon_chunks': 0
+                "total_chunks": len(chunk_keys),
+                "completed_chunks": 0,
+                "failed_chunks": 0,
+                "processing_chunks": 0,
+                "wb_chunks": 0,
+                "ozon_chunks": 0,
             }
 
             for key in chunk_keys:
                 chunk_data = self.redis_client.get(key)
                 if chunk_data:
                     chunk = json.loads(chunk_data)
-                    status = chunk.get('status', '')
-                    platform = chunk.get('platform', '')
+                    status = chunk.get("status", "")
+                    platform = chunk.get("platform", "")
 
                     if status == ChunkStatus.COMPLETED.value:
-                        chunk_stats['completed_chunks'] += 1
+                        chunk_stats["completed_chunks"] += 1
                     elif status == ChunkStatus.FAILED.value:
-                        chunk_stats['failed_chunks'] += 1
+                        chunk_stats["failed_chunks"] += 1
                     elif status == ChunkStatus.PROCESSING.value:
-                        chunk_stats['processing_chunks'] += 1
+                        chunk_stats["processing_chunks"] += 1
 
-                    if platform == 'wb':
-                        chunk_stats['wb_chunks'] += 1
-                    elif platform == 'ozon':
-                        chunk_stats['ozon_chunks'] += 1
+                    if platform == "wb":
+                        chunk_stats["wb_chunks"] += 1
+                    elif platform == "ozon":
+                        chunk_stats["ozon_chunks"] += 1
 
             # Рассчитываем прогресс
-            total_chunks = chunk_stats['total_chunks']
-            completed = chunk_stats['completed_chunks']
+            total_chunks = chunk_stats["total_chunks"]
+            completed = chunk_stats["completed_chunks"]
             progress_percent = (completed / total_chunks * 100) if total_chunks > 0 else 0
 
             return {
-                'job': asdict(job),
-                'chunks': chunk_stats,
-                'progress_percent': round(progress_percent, 1),
-                'estimated_completion': self._estimate_completion(job, chunk_stats)
+                "job": asdict(job),
+                "chunks": chunk_stats,
+                "progress_percent": round(progress_percent, 1),
+                "estimated_completion": self._estimate_completion(job, chunk_stats),
             }
 
         except Exception as e:
             logger.error(f"Ошибка получения статистики задачи {job_id}: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
 
-    def _estimate_completion(self, job: JobProgress, chunk_stats: Dict) -> Optional[str]:
+    def _estimate_completion(self, job: JobProgress, chunk_stats: dict) -> str | None:
         """Оценка времени завершения"""
         try:
             if job.status == JobStatus.COMPLETED.value:
                 return None
 
-            completed = chunk_stats['completed_chunks']
-            total = chunk_stats['total_chunks']
+            completed = chunk_stats["completed_chunks"]
+            total = chunk_stats["total_chunks"]
 
             if completed == 0:
                 return None
@@ -291,7 +295,7 @@ class ProgressTracker:
                 estimated_minutes = remaining_chunks * avg_time_per_chunk
 
                 estimated_completion = datetime.now() + timedelta(minutes=estimated_minutes)
-                return estimated_completion.strftime('%H:%M')
+                return estimated_completion.strftime("%H:%M")
 
             return None
 
@@ -299,7 +303,7 @@ class ProgressTracker:
             logger.error(f"Ошибка оценки времени завершения: {e}")
             return None
 
-    def save_final_result(self, job_id: str, result: Dict[str, Any]):
+    def save_final_result(self, job_id: str, result: dict[str, Any]):
         """Сохранение финального результата"""
         try:
             job = self.get_job_progress(job_id)
@@ -316,7 +320,7 @@ class ProgressTracker:
         except Exception as e:
             logger.error(f"Ошибка сохранения финального результата для {job_id}: {e}")
 
-    def mark_job_completed(self, job_id: str, result: Dict[str, Any]):
+    def mark_job_completed(self, job_id: str, result: dict[str, Any]):
         """Отметка задачи как завершенной"""
         self.save_final_result(job_id, result)
 
@@ -326,7 +330,7 @@ class ProgressTracker:
             job_id,
             JobStatus.FAILED,
             error_message=error_message,
-            completed_at=datetime.now().isoformat()
+            completed_at=datetime.now().isoformat(),
         )
 
     def cleanup_old_jobs(self, days: int = 7):
@@ -342,11 +346,11 @@ class ProgressTracker:
                 job_data = self.redis_client.get(key)
                 if job_data:
                     job = json.loads(job_data)
-                    created_at = datetime.fromisoformat(job.get('created_at', ''))
+                    created_at = datetime.fromisoformat(job.get("created_at", ""))
 
                     if created_at < cutoff_time:
                         # Удаляем задачу и все ее чанки
-                        job_id = job.get('job_id', '')
+                        job_id = job.get("job_id", "")
                         chunk_pattern = f"{self.chunk_prefix}{job_id}_*"
                         chunk_keys = self.redis_client.keys(chunk_pattern)
 
@@ -363,7 +367,7 @@ class ProgressTracker:
             logger.error(f"Ошибка очистки старых задач: {e}")
             return 0
 
-    def get_active_jobs(self) -> List[Dict]:
+    def get_active_jobs(self) -> list[dict]:
         """Получение списка активных задач"""
         try:
             pattern = f"{self.job_prefix}*"
@@ -374,10 +378,10 @@ class ProgressTracker:
                 job_data = self.redis_client.get(key)
                 if job_data:
                     job = json.loads(job_data)
-                    if job.get('status') not in [JobStatus.COMPLETED.value, JobStatus.FAILED.value]:
+                    if job.get("status") not in [JobStatus.COMPLETED.value, JobStatus.FAILED.value]:
                         active_jobs.append(job)
 
-            return sorted(active_jobs, key=lambda x: x.get('created_at', ''))
+            return sorted(active_jobs, key=lambda x: x.get("created_at", ""))
 
         except Exception as e:
             logger.error(f"Ошибка получения активных задач: {e}")

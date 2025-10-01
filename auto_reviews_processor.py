@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""
-Автоматический процессор отзывов
-"""
+"""Автоматический процессор отзывов"""
 
 import asyncio
 import logging
-from datetime import datetime, timedelta
-from typing import List
 
-from wb_reviews_manager import reviews_manager, WBReview
+from wb_reviews_manager import WBReview, reviews_manager
 
 logger = logging.getLogger(__name__)
+
 
 class AutoReviewsProcessor:
     """Автоматический процессор отзывов"""
@@ -49,8 +46,7 @@ class AutoReviewsProcessor:
         logger.info("Автообработка отзывов остановлена")
 
     async def process_all_unanswered_reviews(self):
-        """
-        Первичная обработка всех неотвеченных отзывов
+        """Первичная обработка всех неотвеченных отзывов
         Вызывается при старте бота
         """
         try:
@@ -65,7 +61,7 @@ class AutoReviewsProcessor:
                     await self.bot.send_message(
                         self.admin_chat_id,
                         "✅ <b>Первичная проверка завершена</b>\n\n"
-                        "Все отзывы уже имеют ответы. Новые отзывы будут обрабатываться автоматически."
+                        "Все отзывы уже имеют ответы. Новые отзывы будут обрабатываться автоматически.",
                     )
                 return
 
@@ -81,7 +77,9 @@ class AutoReviewsProcessor:
                 else:
                     manual_reviews.append(review)
 
-            logger.info(f"📊 Анализ отзывов: {len(auto_reviews)} автоответ, {len(manual_reviews)} ручная проверка")
+            logger.info(
+                f"📊 Анализ отзывов: {len(auto_reviews)} автоответ, {len(manual_reviews)} ручная проверка"
+            )
 
             # Обрабатываем автоответы
             auto_processed = 0
@@ -90,7 +88,7 @@ class AutoReviewsProcessor:
 
             # Уведомляем администратора о результатах
             if self.bot and self.admin_chat_id:
-                message = f"🎯 <b>Первичная обработка завершена</b>\n\n"
+                message = "🎯 <b>Первичная обработка завершена</b>\n\n"
                 message += f"📋 Всего неотвеченных отзывов: {len(unanswered_reviews)}\n"
                 message += f"✅ Автоматически обработано: {auto_processed}\n"
                 message += f"⚠️ Требует ручной проверки: {len(manual_reviews)}\n\n"
@@ -104,22 +102,21 @@ class AutoReviewsProcessor:
                     if len(manual_reviews) > 5:
                         message += f"... и еще {len(manual_reviews) - 5} отзывов\n"
 
-                    message += f"\n💡 Используйте команду /reviews для обработки"
+                    message += "\n💡 Используйте команду /reviews для обработки"
 
                 await self.bot.send_message(self.admin_chat_id, message)
 
             return {
-                'total_found': len(unanswered_reviews),
-                'auto_processed': auto_processed,
-                'manual_needed': len(manual_reviews)
+                "total_found": len(unanswered_reviews),
+                "auto_processed": auto_processed,
+                "manual_needed": len(manual_reviews),
             }
 
         except Exception as e:
             logger.error(f"Ошибка первичной обработки отзывов: {e}")
             if self.bot and self.admin_chat_id:
                 await self.bot.send_message(
-                    self.admin_chat_id,
-                    f"❌ <b>Ошибка первичной обработки отзывов</b>\n\n{e}"
+                    self.admin_chat_id, f"❌ <b>Ошибка первичной обработки отзывов</b>\n\n{e}"
                 )
             raise
 
@@ -139,7 +136,9 @@ class AutoReviewsProcessor:
             auto_reviews = [r for r in reviews if reviews_manager.should_auto_respond(r)]
             manual_reviews = [r for r in reviews if reviews_manager.needs_user_approval(r)]
 
-            logger.info(f"Найдено {len(reviews)} отзывов: {len(auto_reviews)} автоответ, {len(manual_reviews)} ручная проверка")
+            logger.info(
+                f"Найдено {len(reviews)} отзывов: {len(auto_reviews)} автоответ, {len(manual_reviews)} ручная проверка"
+            )
 
             # Обрабатываем автоответы
             if auto_reviews:
@@ -152,7 +151,7 @@ class AutoReviewsProcessor:
         except Exception as e:
             logger.error(f"Ошибка цикла обработки отзывов: {e}")
 
-    async def _process_auto_reviews(self, auto_reviews: List[WBReview]):
+    async def _process_auto_reviews(self, auto_reviews: list[WBReview]):
         """Автоматическая обработка отзывов 4-5 звезд"""
         processed_count = 0
         failed_count = 0
@@ -162,16 +161,17 @@ class AutoReviewsProcessor:
                 # Обрабатываем отзыв
                 result = await reviews_manager.process_review(review)
 
-                if result['auto_respond']:
+                if result["auto_respond"]:
                     # Отправляем ответ автоматически
                     success = await reviews_manager.send_review_response(
-                        review.id,
-                        result['generated_response']
+                        review.id, result["generated_response"]
                     )
 
                     if success:
                         processed_count += 1
-                        logger.info(f"✅ Автоответ отправлен на отзыв {review.id} ({review.rating}⭐)")
+                        logger.info(
+                            f"✅ Автоответ отправлен на отзыв {review.id} ({review.rating}⭐)"
+                        )
                         logger.info(f"Ответ: {result['generated_response'][:100]}...")
                     else:
                         failed_count += 1
@@ -184,7 +184,9 @@ class AutoReviewsProcessor:
                 logger.error(f"Ошибка автообработки отзыва {review.id}: {e}")
 
         if processed_count > 0 or failed_count > 0:
-            logger.info(f"Автообработка завершена: ✅{processed_count} успешно, ❌{failed_count} ошибок")
+            logger.info(
+                f"Автообработка завершена: ✅{processed_count} успешно, ❌{failed_count} ошибок"
+            )
 
             # Уведомляем администратора о результатах
             if self.bot and self.admin_chat_id:
@@ -194,16 +196,16 @@ class AutoReviewsProcessor:
                 except Exception as e:
                     logger.error(f"Ошибка отправки уведомления: {e}")
 
-    async def _notify_manual_reviews(self, manual_reviews: List[WBReview]):
+    async def _notify_manual_reviews(self, manual_reviews: list[WBReview]):
         """Уведомление о отзывах, требующих ручной проверки"""
         try:
             negative_count = len([r for r in manual_reviews if r.rating <= 2])
             neutral_count = len([r for r in manual_reviews if r.rating == 3])
 
-            notification_text = f"⚠️ Новые отзывы требуют проверки:\n"
+            notification_text = "⚠️ Новые отзывы требуют проверки:\n"
             notification_text += f"🔴 Негативные (1-2⭐): {negative_count}\n"
             notification_text += f"🟡 Нейтральные (3⭐): {neutral_count}\n\n"
-            notification_text += f"Используйте /reviews для просмотра"
+            notification_text += "Используйте /reviews для просмотра"
 
             await self.bot.send_message(self.admin_chat_id, notification_text)
 
@@ -223,23 +225,24 @@ class AutoReviewsProcessor:
             if auto_reviews:
                 for review in auto_reviews:
                     result = await reviews_manager.process_review(review)
-                    if result['auto_respond']:
+                    if result["auto_respond"]:
                         success = await reviews_manager.send_review_response(
-                            review.id, result['generated_response']
+                            review.id, result["generated_response"]
                         )
                         if success:
                             auto_processed += 1
 
             return {
-                'total_reviews': len(reviews),
-                'auto_processed': auto_processed,
-                'manual_needed': len(manual_reviews),
-                'manual_reviews': manual_reviews
+                "total_reviews": len(reviews),
+                "auto_processed": auto_processed,
+                "manual_needed": len(manual_reviews),
+                "manual_reviews": manual_reviews,
             }
 
         except Exception as e:
             logger.error(f"Ошибка принудительной проверки: {e}")
-            return {'error': str(e)}
+            return {"error": str(e)}
+
 
 # Глобальный экземпляр автопроцессора
 auto_processor = AutoReviewsProcessor()

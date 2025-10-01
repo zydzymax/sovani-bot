@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
-"""
-Интеграция Excel генератора отчетов с Telegram ботом
+"""Интеграция Excel генератора отчетов с Telegram ботом
 Добавляет кнопки экспорта DDS и P&L таблиц к существующим отчетам
 """
 
-import os
 import logging
+import os
 from datetime import datetime
-from typing import Optional
+from datetime import datetime as dt
 
 from aiogram import types
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, InputFile
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputFile
 
-from excel_report_generator import excel_generator
 from cost_data_processor import cost_processor
-from real_data_reports import generate_real_financial_report, generate_cumulative_financial_report
+from excel_report_generator import excel_generator
+from real_data_reports import generate_cumulative_financial_report, generate_real_financial_report
 from staged_processor import staged_processor
-from datetime import datetime as dt
 
 logger = logging.getLogger(__name__)
 
@@ -24,12 +22,12 @@ logger = logging.getLogger(__name__)
 def format_staged_result_to_report(result: dict, date_from: str, date_to: str) -> str:
     """Форматирование результата этапной обработки в текст отчета"""
     try:
-        total_revenue = result.get('total_revenue', 0)
-        total_units = result.get('total_units', 0)
-        net_profit = result.get('net_profit', 0)
+        total_revenue = result.get("total_revenue", 0)
+        total_units = result.get("total_units", 0)
+        net_profit = result.get("net_profit", 0)
 
-        wb_data = result.get('wb_data', {})
-        ozon_data = result.get('ozon_data', {})
+        wb_data = result.get("wb_data", {})
+        ozon_data = result.get("ozon_data", {})
 
         period_days = (dt.strptime(date_to, "%Y-%m-%d") - dt.strptime(date_from, "%Y-%m-%d")).days
 
@@ -84,17 +82,20 @@ def format_staged_result_to_report(result: dict, date_from: str, date_to: str) -
 🎯 Прибыль: {result.get('net_profit', 0):,.0f} ₽"""
 
 
-def add_excel_export_buttons(existing_markup: Optional[InlineKeyboardMarkup] = None,
-                           date_from: str = None, date_to: str = None,
-                           context: str = "financial") -> InlineKeyboardMarkup:
-    """
-    Добавляет кнопки экспорта Excel к существующей клавиатуре
+def add_excel_export_buttons(
+    existing_markup: InlineKeyboardMarkup | None = None,
+    date_from: str = None,
+    date_to: str = None,
+    context: str = "financial",
+) -> InlineKeyboardMarkup:
+    """Добавляет кнопки экспорта Excel к существующей клавиатуре
 
     Args:
         existing_markup: Существующая клавиатура (если есть)
         date_from: Дата начала периода
         date_to: Дата окончания периода
         context: Контекст отчета ('financial' или 'cumulative')
+
     """
     if existing_markup is None:
         markup = InlineKeyboardMarkup()
@@ -105,29 +106,25 @@ def add_excel_export_buttons(existing_markup: Optional[InlineKeyboardMarkup] = N
     if date_from and date_to:
         markup.add(
             InlineKeyboardButton(
-                "📊 DDS Excel",
-                callback_data=f"export_dds_excel:{date_from}:{date_to}:{context}"
+                "📊 DDS Excel", callback_data=f"export_dds_excel:{date_from}:{date_to}:{context}"
             ),
             InlineKeyboardButton(
-                "📈 P&L Excel",
-                callback_data=f"export_pnl_excel:{date_from}:{date_to}:{context}"
-            )
+                "📈 P&L Excel", callback_data=f"export_pnl_excel:{date_from}:{date_to}:{context}"
+            ),
         )
 
     # Кнопка для загрузки шаблона себестоимости
     markup.add(
-        InlineKeyboardButton(
-            "💰 Загрузить себестоимость",
-            callback_data="upload_cost_template"
-        )
+        InlineKeyboardButton("💰 Загрузить себестоимость", callback_data="upload_cost_template")
     )
 
     return markup
 
 
-async def generate_enhanced_financial_report(date_from: str, date_to: str, progress_message: types.Message = None) -> tuple[str, InlineKeyboardMarkup]:
-    """
-    Генерация улучшенного финансового отчета с кнопками экспорта
+async def generate_enhanced_financial_report(
+    date_from: str, date_to: str, progress_message: types.Message = None
+) -> tuple[str, InlineKeyboardMarkup]:
+    """Генерация улучшенного финансового отчета с кнопками экспорта
 
     Args:
         date_from: Начальная дата периода
@@ -136,6 +133,7 @@ async def generate_enhanced_financial_report(date_from: str, date_to: str, progr
 
     Returns:
         Tuple[str, InlineKeyboardMarkup]: (текст отчета, клавиатура с кнопками)
+
     """
     # Определяем размер периода для выбора метода обработки
     start_date = dt.strptime(date_from, "%Y-%m-%d")
@@ -149,7 +147,9 @@ async def generate_enhanced_financial_report(date_from: str, date_to: str, progr
         logger.info(f"🚀 Большой период ({period_days} дней) - используем этапную обработку")
         try:
             # Используем новую этапную систему с красивым прогресс-баром
-            result = await staged_processor.process_year_staged(date_from, date_to, progress_message)
+            result = await staged_processor.process_year_staged(
+                date_from, date_to, progress_message
+            )
 
             # Генерируем текст отчета из результата этапной обработки
             report_text = format_staged_result_to_report(result, date_from, date_to)
@@ -163,7 +163,7 @@ async def generate_enhanced_financial_report(date_from: str, date_to: str, progr
         report_text = await generate_real_financial_report(date_from, date_to, progress_message)
 
     # Добавляем информацию о доступности Excel экспорта
-    report_text += f"""
+    report_text += """
 
 📤 <b>ЭКСПОРТ ДАННЫХ</b>
 • DDS Excel - детальное движение денежных средств
@@ -178,16 +178,15 @@ async def generate_enhanced_financial_report(date_from: str, date_to: str, progr
 
 
 async def generate_enhanced_cumulative_report(days: int) -> tuple[str, InlineKeyboardMarkup]:
-    """
-    Генерация улучшенного нарастающего отчета с кнопками экспорта
-    """
+    """Генерация улучшенного нарастающего отчета с кнопками экспорта"""
     # Генерируем базовый отчет
     report_text = await generate_cumulative_financial_report(days)
 
     # Вычисляем даты для экспорта
     from datetime import date, timedelta
-    date_to = date.today().strftime('%Y-%m-%d')
-    date_from = (date.today() - timedelta(days=days-1)).strftime('%Y-%m-%d')
+
+    date_to = date.today().strftime("%Y-%m-%d")
+    date_from = (date.today() - timedelta(days=days - 1)).strftime("%Y-%m-%d")
 
     # Добавляем информацию о доступности Excel экспорта
     report_text += f"""
@@ -221,7 +220,7 @@ async def handle_dds_excel_export(callback_query: types.CallbackQuery):
             "📊 <b>Генерация DDS Excel отчета</b>\n\n"
             f"📅 Период: {date_from} — {date_to}\n"
             "🔄 Создание таблиц...",
-            parse_mode='HTML'
+            parse_mode="HTML",
         )
 
         # Генерируем Excel файл
@@ -233,17 +232,17 @@ async def handle_dds_excel_export(callback_query: types.CallbackQuery):
                 "📊 <b>DDS Excel отчет готов!</b>\n\n"
                 f"📅 Период: {date_from} — {date_to}\n"
                 "📤 Отправляю файл...",
-                parse_mode='HTML'
+                parse_mode="HTML",
             )
 
             # Отправляем Excel файл
-            with open(excel_file_path, 'rb') as file:
+            with open(excel_file_path, "rb") as file:
                 await callback_query.message.reply_document(
                     InputFile(file, filename=os.path.basename(excel_file_path)),
                     caption=f"📊 <b>DDS отчет</b>\n"
-                           f"📅 Период: {date_from} — {date_to}\n"
-                           f"🕐 Создан: {datetime.now().strftime('%d.%m.%Y %H:%M')}",
-                    parse_mode='HTML'
+                    f"📅 Период: {date_from} — {date_to}\n"
+                    f"🕐 Создан: {datetime.now().strftime('%d.%m.%Y %H:%M')}",
+                    parse_mode="HTML",
                 )
 
             # Удаляем статусное сообщение
@@ -251,13 +250,14 @@ async def handle_dds_excel_export(callback_query: types.CallbackQuery):
 
             # Удаляем временный файл через 5 минут
             import asyncio
+
             asyncio.create_task(delete_file_later(excel_file_path, 300))
 
         else:
             await status_msg.edit_text(
                 "❌ <b>Ошибка создания файла</b>\n\n"
                 "Файл DDS отчета не был создан. Повторите попытку позже.",
-                parse_mode='HTML'
+                parse_mode="HTML",
             )
 
     except Exception as e:
@@ -265,9 +265,7 @@ async def handle_dds_excel_export(callback_query: types.CallbackQuery):
         await callback_query.answer("❌ Ошибка создания отчета")
         try:
             await callback_query.message.reply(
-                f"❌ <b>Ошибка экспорта DDS</b>\n\n"
-                f"<code>{str(e)}</code>",
-                parse_mode='HTML'
+                f"❌ <b>Ошибка экспорта DDS</b>\n\n" f"<code>{e!s}</code>", parse_mode="HTML"
             )
         except:
             pass
@@ -291,7 +289,7 @@ async def handle_pnl_excel_export(callback_query: types.CallbackQuery):
             "📈 <b>Генерация P&L Excel отчета</b>\n\n"
             f"📅 Период: {date_from} — {date_to}\n"
             "🔄 Создание таблиц...",
-            parse_mode='HTML'
+            parse_mode="HTML",
         )
 
         # Получаем последний файл с данными о себестоимости
@@ -302,7 +300,7 @@ async def handle_pnl_excel_export(callback_query: types.CallbackQuery):
                 f"📅 Период: {date_from} — {date_to}\n"
                 "💰 Используются данные о себестоимости\n"
                 "🔄 Создание расширенного отчета...",
-                parse_mode='HTML'
+                parse_mode="HTML",
             )
 
         # Генерируем Excel файл
@@ -317,20 +315,22 @@ async def handle_pnl_excel_export(callback_query: types.CallbackQuery):
                 f"📅 Период: {date_from} — {date_to}\n"
                 f"💰 Себестоимость: {'✅ Учтена' if cost_data_file else '❌ Не загружена'}\n"
                 "📤 Отправляю файл...",
-                parse_mode='HTML'
+                parse_mode="HTML",
             )
 
             # Отправляем Excel файл
-            with open(excel_file_path, 'rb') as file:
-                caption = f"📈 <b>P&L отчет</b>\n" \
-                         f"📅 Период: {date_from} — {date_to}\n" \
-                         f"💰 Себестоимость: {'учтена' if cost_data_file else 'базовые данные'}\n" \
-                         f"🕐 Создан: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+            with open(excel_file_path, "rb") as file:
+                caption = (
+                    f"📈 <b>P&L отчет</b>\n"
+                    f"📅 Период: {date_from} — {date_to}\n"
+                    f"💰 Себестоимость: {'учтена' if cost_data_file else 'базовые данные'}\n"
+                    f"🕐 Создан: {datetime.now().strftime('%d.%m.%Y %H:%M')}"
+                )
 
                 await callback_query.message.reply_document(
                     InputFile(file, filename=os.path.basename(excel_file_path)),
                     caption=caption,
-                    parse_mode='HTML'
+                    parse_mode="HTML",
                 )
 
             # Удаляем статусное сообщение
@@ -338,13 +338,14 @@ async def handle_pnl_excel_export(callback_query: types.CallbackQuery):
 
             # Удаляем временный файл через 5 минут
             import asyncio
+
             asyncio.create_task(delete_file_later(excel_file_path, 300))
 
         else:
             await status_msg.edit_text(
                 "❌ <b>Ошибка создания файла</b>\n\n"
                 "Файл P&L отчета не был создан. Повторите попытку позже.",
-                parse_mode='HTML'
+                parse_mode="HTML",
             )
 
     except Exception as e:
@@ -352,9 +353,7 @@ async def handle_pnl_excel_export(callback_query: types.CallbackQuery):
         await callback_query.answer("❌ Ошибка создания отчета")
         try:
             await callback_query.message.reply(
-                f"❌ <b>Ошибка экспорта P&L</b>\n\n"
-                f"<code>{str(e)}</code>",
-                parse_mode='HTML'
+                f"❌ <b>Ошибка экспорта P&L</b>\n\n" f"<code>{e!s}</code>", parse_mode="HTML"
             )
         except:
             pass
@@ -367,31 +366,30 @@ async def handle_cost_template_upload(callback_query: types.CallbackQuery):
 
         # Показываем статус генерации
         status_msg = await callback_query.message.reply(
-            "💰 <b>Генерация шаблона себестоимости</b>\n\n"
-            "🔄 Сбор данных о товарах...",
-            parse_mode='HTML'
+            "💰 <b>Генерация шаблона себестоимости</b>\n\n" "🔄 Сбор данных о товарах...",
+            parse_mode="HTML",
         )
 
         # Генерируем шаблон
         from cost_template_generator import CostTemplateGenerator
+
         generator = CostTemplateGenerator()
         template_path = await generator.generate_cost_template()
 
         # Отправляем шаблон
         if os.path.exists(template_path):
             await status_msg.edit_text(
-                "💰 <b>Шаблон себестоимости готов!</b>\n\n"
-                "📤 Отправляю файл...",
-                parse_mode='HTML'
+                "💰 <b>Шаблон себестоимости готов!</b>\n\n" "📤 Отправляю файл...",
+                parse_mode="HTML",
             )
 
-            with open(template_path, 'rb') as file:
+            with open(template_path, "rb") as file:
                 await callback_query.message.reply_document(
                     InputFile(file, filename=os.path.basename(template_path)),
                     caption="💰 <b>Шаблон себестоимости</b>\n\n"
-                           "📝 Заполните данные и отправьте файл обратно в бот\n"
-                           "📋 Инструкции находятся внутри файла",
-                    parse_mode='HTML'
+                    "📝 Заполните данные и отправьте файл обратно в бот\n"
+                    "📋 Инструкции находятся внутри файла",
+                    parse_mode="HTML",
                 )
 
             # Удаляем статусное сообщение
@@ -399,13 +397,14 @@ async def handle_cost_template_upload(callback_query: types.CallbackQuery):
 
             # Удаляем временный файл через 10 минут
             import asyncio
+
             asyncio.create_task(delete_file_later(template_path, 600))
 
         else:
             await status_msg.edit_text(
                 "❌ <b>Ошибка создания шаблона</b>\n\n"
                 "Шаблон не был создан. Повторите попытку позже.",
-                parse_mode='HTML'
+                parse_mode="HTML",
             )
 
     except Exception as e:
@@ -413,9 +412,7 @@ async def handle_cost_template_upload(callback_query: types.CallbackQuery):
         await callback_query.answer("❌ Ошибка создания шаблона")
         try:
             await callback_query.message.reply(
-                f"❌ <b>Ошибка генерации шаблона</b>\n\n"
-                f"<code>{str(e)}</code>",
-                parse_mode='HTML'
+                f"❌ <b>Ошибка генерации шаблона</b>\n\n" f"<code>{e!s}</code>", parse_mode="HTML"
             )
         except:
             pass
@@ -428,18 +425,16 @@ async def handle_cost_file_upload(message: types.Message):
             return
 
         # Проверяем тип файла
-        if not message.document.file_name.endswith(('.xlsx', '.xls')):
+        if not message.document.file_name.endswith((".xlsx", ".xls")):
             await message.reply(
                 "❌ <b>Неподдерживаемый формат</b>\n\n"
                 "Пожалуйста, отправьте Excel файл (.xlsx или .xls)",
-                parse_mode='HTML'
+                parse_mode="HTML",
             )
             return
 
         await message.reply(
-            "💰 <b>Обработка файла себестоимости</b>\n\n"
-            "⬇️ Скачивание файла...",
-            parse_mode='HTML'
+            "💰 <b>Обработка файла себестоимости</b>\n\n" "⬇️ Скачивание файла...", parse_mode="HTML"
         )
 
         # Скачиваем файл
@@ -447,24 +442,23 @@ async def handle_cost_file_upload(message: types.Message):
         downloaded_file = await message.bot.download_file(file_info.file_path)
 
         # Сохраняем файл
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        temp_file_path = f'/tmp/cost_template_{timestamp}.xlsx'
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        temp_file_path = f"/tmp/cost_template_{timestamp}.xlsx"
 
-        with open(temp_file_path, 'wb') as f:
+        with open(temp_file_path, "wb") as f:
             f.write(downloaded_file.read())
 
         # Обрабатываем файл
         status_msg = await message.reply(
-            "💰 <b>Обработка файла себестоимости</b>\n\n"
-            "🔄 Валидация данных...",
-            parse_mode='HTML'
+            "💰 <b>Обработка файла себестоимости</b>\n\n" "🔄 Валидация данных...",
+            parse_mode="HTML",
         )
 
         processed_data = await cost_processor.process_cost_template_file(temp_file_path)
 
         # Формируем отчет о результатах обработки
-        stats = processed_data['statistics']
-        errors = processed_data['validation_errors']
+        stats = processed_data["statistics"]
+        errors = processed_data["validation_errors"]
 
         result_text = f"""💰 <b>Файл себестоимости обработан</b>
 
@@ -477,21 +471,21 @@ async def handle_cost_file_upload(message: types.Message):
 💵 <b>Постоянные расходы в месяц:</b>
 {stats['monthly_fixed_total']:,.0f} ₽"""
 
-        if stats.get('platforms'):
+        if stats.get("platforms"):
             result_text += "\n\n📈 <b>По платформам:</b>"
-            for platform, data in stats['platforms'].items():
+            for platform, data in stats["platforms"].items():
                 result_text += f"\n• {platform}: {data['count']} SKU"
 
         if errors:
-            result_text += f"\n\n⚠️ <b>Ошибки валидации:</b>"
+            result_text += "\n\n⚠️ <b>Ошибки валидации:</b>"
             for error in errors[:3]:  # Показываем только первые 3
                 result_text += f"\n• {error}"
             if len(errors) > 3:
                 result_text += f"\n... и еще {len(errors) - 3} ошибок"
 
-        result_text += f"\n\n✅ <b>Данные интегрированы в систему расчетов</b>"
+        result_text += "\n\n✅ <b>Данные интегрированы в систему расчетов</b>"
 
-        await status_msg.edit_text(result_text, parse_mode='HTML')
+        await status_msg.edit_text(result_text, parse_mode="HTML")
 
         # Удаляем временный файл
         os.unlink(temp_file_path)
@@ -499,15 +493,14 @@ async def handle_cost_file_upload(message: types.Message):
     except Exception as e:
         logger.error(f"Ошибка обработки файла себестоимости: {e}")
         await message.reply(
-            f"❌ <b>Ошибка обработки файла</b>\n\n"
-            f"<code>{str(e)}</code>",
-            parse_mode='HTML'
+            f"❌ <b>Ошибка обработки файла</b>\n\n" f"<code>{e!s}</code>", parse_mode="HTML"
         )
 
 
 async def delete_file_later(file_path: str, delay_seconds: int):
     """Удаление файла через заданное время"""
     import asyncio
+
     await asyncio.sleep(delay_seconds)
     try:
         if os.path.exists(file_path):
@@ -519,12 +512,13 @@ async def delete_file_later(file_path: str, delay_seconds: int):
 
 # Функции для интеграции с существующими обработчиками бота
 
+
 def get_callback_handlers():
     """Возвращает словарь с обработчиками callback'ов для интеграции в основной бот"""
     return {
-        'export_dds_excel': handle_dds_excel_export,
-        'export_pnl_excel': handle_pnl_excel_export,
-        'upload_cost_template': handle_cost_template_upload,
+        "export_dds_excel": handle_dds_excel_export,
+        "export_pnl_excel": handle_pnl_excel_export,
+        "upload_cost_template": handle_cost_template_upload,
     }
 
 
@@ -538,9 +532,10 @@ async def generate_cost_summary_for_bot() -> str:
     return await cost_processor.generate_cost_summary_report()
 
 
-async def generate_wb_financial_report(date_from: str, date_to: str, progress_message: types.Message = None) -> tuple[str, InlineKeyboardMarkup]:
-    """
-    Генерация финансового отчета только для Wildberries
+async def generate_wb_financial_report(
+    date_from: str, date_to: str, progress_message: types.Message = None
+) -> tuple[str, InlineKeyboardMarkup]:
+    """Генерация финансового отчета только для Wildberries
 
     Args:
         date_from: Начальная дата периода
@@ -549,6 +544,7 @@ async def generate_wb_financial_report(date_from: str, date_to: str, progress_me
 
     Returns:
         Tuple[str, InlineKeyboardMarkup]: (текст отчета, клавиатура с кнопками)
+
     """
     # Определяем размер периода
     start_date = dt.strptime(date_from, "%Y-%m-%d")
@@ -565,13 +561,13 @@ async def generate_wb_financial_report(date_from: str, date_to: str, progress_me
         report_text = await generate_real_financial_report(date_from, date_to, progress_message)
 
         # Добавляем префикс для WB
-        report_text = f"🟣 <b>WILDBERRIES ФИНАНСОВЫЙ ОТЧЕТ</b>\n\n" + report_text
+        report_text = "🟣 <b>WILDBERRIES ФИНАНСОВЫЙ ОТЧЕТ</b>\n\n" + report_text
 
     except Exception as e:
         logger.error(f"Ошибка генерации WB отчета: {e}")
         report_text = f"""❌ <b>ОШИБКА ГЕНЕРАЦИИ WB ОТЧЕТА</b>
 
-🚫 Ошибка: {str(e)}
+🚫 Ошибка: {e!s}
 
 📝 <b>Возможные причины:</b>
 • WB API недоступен
@@ -581,7 +577,7 @@ async def generate_wb_financial_report(date_from: str, date_to: str, progress_me
 🔄 Повторите запрос через несколько минут"""
 
     # Добавляем информацию о доступности Excel экспорта для WB
-    report_text += f"""
+    report_text += """
 
 📤 <b>ЭКСПОРТ WB ДАННЫХ</b>
 • WB DDS Excel - детальное движение денежных средств WB
@@ -595,9 +591,10 @@ async def generate_wb_financial_report(date_from: str, date_to: str, progress_me
     return report_text, markup
 
 
-async def generate_ozon_financial_report(date_from: str, date_to: str, progress_message: types.Message = None) -> tuple[str, InlineKeyboardMarkup]:
-    """
-    Генерация финансового отчета только для Ozon
+async def generate_ozon_financial_report(
+    date_from: str, date_to: str, progress_message: types.Message = None
+) -> tuple[str, InlineKeyboardMarkup]:
+    """Генерация финансового отчета только для Ozon
 
     Args:
         date_from: Начальная дата периода
@@ -606,6 +603,7 @@ async def generate_ozon_financial_report(date_from: str, date_to: str, progress_
 
     Returns:
         Tuple[str, InlineKeyboardMarkup]: (текст отчета, клавиатура с кнопками)
+
     """
     # Определяем размер периода
     start_date = dt.strptime(date_from, "%Y-%m-%d")
@@ -622,13 +620,13 @@ async def generate_ozon_financial_report(date_from: str, date_to: str, progress_
         report_text = await generate_real_financial_report(date_from, date_to, progress_message)
 
         # Добавляем префикс для Ozon
-        report_text = f"🟠 <b>OZON ФИНАНСОВЫЙ ОТЧЕТ</b>\n\n" + report_text
+        report_text = "🟠 <b>OZON ФИНАНСОВЫЙ ОТЧЕТ</b>\n\n" + report_text
 
     except Exception as e:
         logger.error(f"Ошибка генерации Ozon отчета: {e}")
         report_text = f"""❌ <b>ОШИБКА ГЕНЕРАЦИИ OZON ОТЧЕТА</b>
 
-🚫 Ошибка: {str(e)}
+🚫 Ошибка: {e!s}
 
 📝 <b>Возможные причины:</b>
 • Ozon API недоступен
@@ -638,7 +636,7 @@ async def generate_ozon_financial_report(date_from: str, date_to: str, progress_
 🔄 Повторите запрос через несколько минут"""
 
     # Добавляем информацию о доступности Excel экспорта для Ozon
-    report_text += f"""
+    report_text += """
 
 📤 <b>ЭКСПОРТ OZON ДАННЫХ</b>
 • Ozon DDS Excel - детальное движение денежных средств Ozon
@@ -647,6 +645,8 @@ async def generate_ozon_financial_report(date_from: str, date_to: str, progress_
 • Интеграция с данными о себестоимости Ozon"""
 
     # Создаем клавиатуру с кнопками экспорта для Ozon
-    markup = add_excel_export_buttons(date_from=date_from, date_to=date_to, context="ozon_financial")
+    markup = add_excel_export_buttons(
+        date_from=date_from, date_to=date_to, context="ozon_financial"
+    )
 
     return report_text, markup

@@ -1,12 +1,11 @@
-"""
-Утилиты для выбора дат и периодов в Telegram боте
-"""
+"""Утилиты для выбора дат и периодов в Telegram боте"""
 
 import calendar
-from datetime import datetime, timedelta, date
-from typing import Tuple, Optional, Dict, Any
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 import logging
+from datetime import date, datetime, timedelta
+from typing import Any
+
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 logger = logging.getLogger(__name__)
 
@@ -27,46 +26,43 @@ class DatePicker:
         # Быстрые периоды
         kb.add(
             InlineKeyboardButton("📅 Сегодня", callback_data="period:today"),
-            InlineKeyboardButton("📅 Вчера", callback_data="period:yesterday")
+            InlineKeyboardButton("📅 Вчера", callback_data="period:yesterday"),
         )
         kb.add(
             InlineKeyboardButton("📅 7 дней", callback_data="period:7d"),
-            InlineKeyboardButton("📅 30 дней", callback_data="period:30d")
+            InlineKeyboardButton("📅 30 дней", callback_data="period:30d"),
         )
         kb.add(
             InlineKeyboardButton("📅 Текущая неделя", callback_data="period:current_week"),
-            InlineKeyboardButton("📅 Текущий месяц", callback_data="period:current_month")
+            InlineKeyboardButton("📅 Текущий месяц", callback_data="period:current_month"),
         )
         kb.add(
             InlineKeyboardButton("📅 Прошлая неделя", callback_data="period:last_week"),
-            InlineKeyboardButton("📅 Прошлый месяц", callback_data="period:last_month")
+            InlineKeyboardButton("📅 Прошлый месяц", callback_data="period:last_month"),
         )
 
         # Кастомный период
-        kb.add(
-            InlineKeyboardButton("🗓️ Выбрать даты", callback_data="period:custom")
-        )
+        kb.add(InlineKeyboardButton("🗓️ Выбрать даты", callback_data="period:custom"))
 
         return kb
 
     @staticmethod
-    def get_calendar_keyboard(year: int, month: int, selection_type: str = "from") -> InlineKeyboardMarkup:
-        """
-        Создание календаря для выбора даты
+    def get_calendar_keyboard(
+        year: int, month: int, selection_type: str = "from"
+    ) -> InlineKeyboardMarkup:
+        """Создание календаря для выбора даты
 
         Args:
             year: Год
             month: Месяц (1-12)
             selection_type: 'from' для начальной даты, 'to' для конечной
+
         """
         kb = InlineKeyboardMarkup()
 
         # Название месяца и года
         month_name = calendar.month_name[month]
-        kb.add(InlineKeyboardButton(
-            f"📅 {month_name} {year}",
-            callback_data="calendar:ignore"
-        ))
+        kb.add(InlineKeyboardButton(f"📅 {month_name} {year}", callback_data="calendar:ignore"))
 
         # Навигация по месяцам
         prev_month = month - 1 if month > 1 else 12
@@ -75,9 +71,13 @@ class DatePicker:
         next_year = year if month < 12 else year + 1
 
         kb.add(
-            InlineKeyboardButton("◀️", callback_data=f"calendar:{selection_type}:{prev_year}:{prev_month}"),
+            InlineKeyboardButton(
+                "◀️", callback_data=f"calendar:{selection_type}:{prev_year}:{prev_month}"
+            ),
             InlineKeyboardButton("📆", callback_data="calendar:ignore"),
-            InlineKeyboardButton("▶️", callback_data=f"calendar:{selection_type}:{next_year}:{next_month}")
+            InlineKeyboardButton(
+                "▶️", callback_data=f"calendar:{selection_type}:{next_year}:{next_month}"
+            ),
         )
 
         # Дни недели
@@ -89,9 +89,9 @@ class DatePicker:
         today = datetime.now().date()
 
         # Определяем минимальную доступную дату в зависимости от контекста
-        if context and 'wb' in context.lower():
+        if context and "wb" in context.lower():
             max_days = WB_MAX_DAYS
-        elif context and 'ozon' in context.lower():
+        elif context and "ozon" in context.lower():
             max_days = OZON_MAX_DAYS
         else:
             max_days = DEFAULT_MAX_DAYS
@@ -129,21 +129,21 @@ class DatePicker:
         # Кнопки управления
         kb.add(
             InlineKeyboardButton("❌ Отмена", callback_data="calendar:cancel"),
-            InlineKeyboardButton("📅 Быстрые периоды", callback_data="calendar:quick")
+            InlineKeyboardButton("📅 Быстрые периоды", callback_data="calendar:quick"),
         )
 
         return kb
 
     @staticmethod
-    def parse_predefined_period(period_code: str) -> Tuple[str, str]:
-        """
-        Преобразование кода периода в даты
+    def parse_predefined_period(period_code: str) -> tuple[str, str]:
+        """Преобразование кода периода в даты
 
         Args:
             period_code: Код периода (today, yesterday, 7d, etc.)
 
         Returns:
             Tuple[date_from, date_to] в формате YYYY-MM-DD
+
         """
         today = datetime.now().date()
 
@@ -157,7 +157,7 @@ class DatePicker:
         elif period_code.endswith("d"):
             # Периоды в днях (7d, 30d, etc.)
             days = int(period_code[:-1])
-            start_date = today - timedelta(days=days-1)
+            start_date = today - timedelta(days=days - 1)
             return start_date.strftime("%Y-%m-%d"), today.strftime("%Y-%m-%d")
 
         elif period_code == "current_week":
@@ -195,8 +195,7 @@ class DatePicker:
 
     @staticmethod
     def format_period_description(date_from: str, date_to: str) -> str:
-        """
-        Создание описания периода на русском языке
+        """Создание описания периода на русском языке
 
         Args:
             date_from: Начальная дата (YYYY-MM-DD)
@@ -204,6 +203,7 @@ class DatePicker:
 
         Returns:
             Описание периода
+
         """
         try:
             from_date = datetime.strptime(date_from, "%Y-%m-%d").date()
@@ -239,9 +239,8 @@ class DatePicker:
             return f"{date_from} - {date_to}"
 
     @staticmethod
-    def validate_date_range(date_from: str, date_to: str, context: str = None) -> Tuple[bool, str]:
-        """
-        Валидация диапазона дат
+    def validate_date_range(date_from: str, date_to: str, context: str = None) -> tuple[bool, str]:
+        """Валидация диапазона дат
 
         Args:
             date_from: Начальная дата
@@ -250,16 +249,17 @@ class DatePicker:
 
         Returns:
             Tuple[is_valid, error_message]
+
         """
         try:
             from_date = datetime.strptime(date_from, "%Y-%m-%d").date()
             to_date = datetime.strptime(date_to, "%Y-%m-%d").date()
 
             # Определяем максимальный период в зависимости от контекста
-            if context and 'wb' in context.lower():
+            if context and "wb" in context.lower():
                 max_days = WB_MAX_DAYS
                 marketplace = "WB"
-            elif context and 'ozon' in context.lower():
+            elif context and "ozon" in context.lower():
                 max_days = OZON_MAX_DAYS
                 marketplace = "Ozon"
             else:
@@ -283,7 +283,10 @@ class DatePicker:
             # Проверка на слишком старые даты с учетом маркетплейса
             min_date = today - timedelta(days=max_days)
             if from_date < min_date:
-                return False, f"Слишком старая дата для {marketplace} (максимум {max_days} дней назад)"
+                return (
+                    False,
+                    f"Слишком старая дата для {marketplace} (максимум {max_days} дней назад)",
+                )
 
             return True, ""
 
@@ -295,30 +298,30 @@ class DateRangeManager:
     """Менеджер для сохранения выбранных дат в процессе диалога"""
 
     def __init__(self):
-        self.user_selections: Dict[int, Dict[str, Any]] = {}
+        self.user_selections: dict[int, dict[str, Any]] = {}
 
     def start_date_selection(self, user_id: int, context: str = "report"):
         """Начало выбора диапазона дат"""
         self.user_selections[user_id] = {
-            'context': context,
-            'date_from': None,
-            'date_to': None,
-            'step': 'from'  # 'from', 'to', 'complete'
+            "context": context,
+            "date_from": None,
+            "date_to": None,
+            "step": "from",  # 'from', 'to', 'complete'
         }
 
     def set_date_from(self, user_id: int, date_from: str):
         """Установка начальной даты"""
         if user_id in self.user_selections:
-            self.user_selections[user_id]['date_from'] = date_from
-            self.user_selections[user_id]['step'] = 'to'
+            self.user_selections[user_id]["date_from"] = date_from
+            self.user_selections[user_id]["step"] = "to"
 
     def set_date_to(self, user_id: int, date_to: str):
         """Установка конечной даты"""
         if user_id in self.user_selections:
-            self.user_selections[user_id]['date_to'] = date_to
-            self.user_selections[user_id]['step'] = 'complete'
+            self.user_selections[user_id]["date_to"] = date_to
+            self.user_selections[user_id]["step"] = "complete"
 
-    def get_selection(self, user_id: int) -> Optional[Dict[str, Any]]:
+    def get_selection(self, user_id: int) -> dict[str, Any] | None:
         """Получение выбранных дат"""
         return self.user_selections.get(user_id)
 
@@ -330,7 +333,7 @@ class DateRangeManager:
     def is_complete(self, user_id: int) -> bool:
         """Проверка завершенности выбора"""
         selection = self.user_selections.get(user_id)
-        return selection and selection.get('step') == 'complete'
+        return selection and selection.get("step") == "complete"
 
 
 # Глобальный менеджер дат
@@ -342,7 +345,9 @@ def get_enhanced_period_menu() -> InlineKeyboardMarkup:
     return DatePicker.get_predefined_periods_menu()
 
 
-def get_calendar_for_date_selection(year: int = None, month: int = None, selection_type: str = "from", context: str = None) -> InlineKeyboardMarkup:
+def get_calendar_for_date_selection(
+    year: int = None, month: int = None, selection_type: str = "from", context: str = None
+) -> InlineKeyboardMarkup:
     """Получение календаря для выбора даты"""
     if year is None or month is None:
         now = datetime.now()

@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
-"""
-Диагностика проблем с финансовыми данными
-"""
+"""Диагностика проблем с финансовыми данными"""
 
 import asyncio
 import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 
 async def debug_financial_data():
     """Диагностика проблем с данными в финансовых отчетах"""
@@ -24,7 +23,7 @@ async def debug_financial_data():
         logger.info("\n📊 Проверка WB данных...")
         wb_data = await reports.get_real_wb_sales(date_from, date_to)
 
-        logger.info(f"WB результаты:")
+        logger.info("WB результаты:")
         logger.info(f"  Выручка: {wb_data.get('revenue', 0):,.2f} ₽")
         logger.info(f"  Единиц доставлено: {wb_data.get('units', 0)}")
         logger.info(f"  Заказов единиц: {wb_data.get('orders_units', 0)}")
@@ -33,8 +32,8 @@ async def debug_financial_data():
         logger.info(f"  Возвратов: {wb_data.get('returns_count', 0)}")
 
         # Анализируем сырые данные WB
-        if 'sales_data' in wb_data:
-            sales_data = wb_data['sales_data']
+        if "sales_data" in wb_data:
+            sales_data = wb_data["sales_data"]
             logger.info(f"\n🔍 Анализ сырых данных WB ({len(sales_data)} записей):")
 
             # Считаем уникальные даты
@@ -43,17 +42,19 @@ async def debug_financial_data():
             returns = 0
 
             for sale in sales_data[:10]:  # Показываем первые 10 для примера
-                date = sale.get('date', '')[:10]
+                date = sale.get("date", "")[:10]
                 dates.add(date)
 
-                if sale.get('isRealization'):
+                if sale.get("isRealization"):
                     realizations += 1
                 else:
                     returns += 1
 
-                logger.info(f"  Пример записи: {sale.get('date', '')} - {sale.get('saleID', '')} - "
-                          f"{'реализация' if sale.get('isRealization') else 'возврат'} - "
-                          f"{sale.get('priceWithDisc', 0)} ₽")
+                logger.info(
+                    f"  Пример записи: {sale.get('date', '')} - {sale.get('saleID', '')} - "
+                    f"{'реализация' if sale.get('isRealization') else 'возврат'} - "
+                    f"{sale.get('priceWithDisc', 0)} ₽"
+                )
 
             logger.info(f"  Уникальных дат: {len(dates)}")
             logger.info(f"  Реализаций: {realizations}")
@@ -67,7 +68,7 @@ async def debug_financial_data():
         logger.info("\n📊 Проверка Ozon данных...")
         ozon_data = await reports.get_real_ozon_sales(date_from, date_to)
 
-        logger.info(f"Ozon результаты:")
+        logger.info("Ozon результаты:")
         logger.info(f"  Выручка: {ozon_data.get('revenue', 0):,.2f} ₽")
         logger.info(f"  Единиц: {ozon_data.get('units', 0)}")
         logger.info(f"  Комиссия: {ozon_data.get('commission', 0):,.2f} ₽")
@@ -75,8 +76,8 @@ async def debug_financial_data():
         # Проверяем chunked API напрямую
         logger.info("\n🔄 Проверка chunked API...")
 
-        from api_chunking import ChunkedAPIManager
         import api_clients_main as api_clients
+        from api_chunking import ChunkedAPIManager
 
         chunked_api = ChunkedAPIManager(api_clients)
 
@@ -115,9 +116,10 @@ async def debug_financial_data():
         try:
             # Пробуем старый download_wb_reports
             wb_reports = await api_clients.download_wb_reports()
-            if wb_reports and wb_reports.get('sales'):
-                with open(wb_reports['sales'], 'r', encoding='utf-8') as f:
+            if wb_reports and wb_reports.get("sales"):
+                with open(wb_reports["sales"], encoding="utf-8") as f:
                     import json
+
                     old_sales = json.load(f)
                 logger.info(f"Старый метод WB: {len(old_sales)} записей")
             else:
@@ -129,6 +131,7 @@ async def debug_financial_data():
 
     except Exception as e:
         logger.error(f"❌ Ошибка диагностики: {e}")
+
 
 if __name__ == "__main__":
     asyncio.run(debug_financial_data())

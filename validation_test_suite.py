@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-КОМПЛЕКСНАЯ СИСТЕМА ТЕСТИРОВАНИЯ И ВАЛИДАЦИИ
+"""КОМПЛЕКСНАЯ СИСТЕМА ТЕСТИРОВАНИЯ И ВАЛИДАЦИИ
 Проверка эффективности критических исправлений #1-3
 
 Дата создания: 30 сентября 2025
@@ -8,24 +7,25 @@
 """
 
 import asyncio
-import logging
 import json
+import logging
+from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
-from dataclasses import dataclass, asdict
 
-from real_data_reports import RealDataFinancialReports
-from api_chunking import ChunkedAPIManager
 import api_clients_main as api_clients
+from api_chunking import ChunkedAPIManager
+from real_data_reports import RealDataFinancialReports
 
 # Настройка логирования
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler(f'/root/sovani_bot/validation_test_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'),
-        logging.StreamHandler()
-    ]
+        logging.FileHandler(
+            f'/root/sovani_bot/validation_test_{datetime.now().strftime("%Y%m%d_%H%M%S")}.log'
+        ),
+        logging.StreamHandler(),
+    ],
 )
 logger = logging.getLogger(__name__)
 
@@ -33,6 +33,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class TestResult:
     """Результат одного теста"""
+
     test_name: str
     period_start: str
     period_end: str
@@ -48,7 +49,7 @@ class TestResult:
 
     # Финансовые метрики
     net_revenue_to_seller: float  # forPay
-    gross_sales_value: float      # priceWithDisc
+    gross_sales_value: float  # priceWithDisc
     wb_total_deductions: float
     units_sold: int
 
@@ -57,10 +58,10 @@ class TestResult:
     date_parsing_errors: int
 
     # Эталонные данные (если есть)
-    expected_revenue: Optional[float] = None
+    expected_revenue: float | None = None
 
     # Точность
-    accuracy_percent: Optional[float] = None
+    accuracy_percent: float | None = None
 
     # Статус теста
     test_passed: bool = False
@@ -70,6 +71,7 @@ class TestResult:
 @dataclass
 class ValidationReport:
     """Полный отчет о валидации"""
+
     report_date: str
     tests_total: int
     tests_passed: int
@@ -79,9 +81,9 @@ class ValidationReport:
     deduplication_effectiveness: float
     date_filtering_quality: float
 
-    test_results: List[TestResult]
+    test_results: list[TestResult]
 
-    recommendations: List[str]
+    recommendations: list[str]
     summary: str
 
 
@@ -94,75 +96,71 @@ class ValidationTestSuite:
 
         # Эталонные данные из КРИТИЧЕСКОГО АУДИТА
         self.reference_data = {
-            'january_2025': {
-                'date_from': '2025-01-01',
-                'date_to': '2025-01-31',
-                'expected_orders_value': 113595,  # Из аудита
-                'expected_sales_value': 60688,    # Из аудита
-                'description': 'Январь 2025 - эталонный период с известными значениями'
+            "january_2025": {
+                "date_from": "2025-01-01",
+                "date_to": "2025-01-31",
+                "expected_orders_value": 113595,  # Из аудита
+                "expected_sales_value": 60688,  # Из аудита
+                "description": "Январь 2025 - эталонный период с известными значениями",
             }
         }
 
     async def test_1_day_period(self) -> TestResult:
-        """
-        ТЕСТ 1: Период 1 день
+        """ТЕСТ 1: Период 1 день
         Цель: Проверка базовой работоспособности без чанкинга
         """
         logger.info("=" * 80)
         logger.info("🧪 ТЕСТ 1: ПЕРИОД 1 ДЕНЬ")
         logger.info("=" * 80)
 
-        date_to = datetime.now().strftime('%Y-%m-%d')
-        date_from = (datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')
+        date_to = datetime.now().strftime("%Y-%m-%d")
+        date_from = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
 
         return await self._run_test(
             test_name="Тест 1: Период 1 день",
             date_from=date_from,
             date_to=date_to,
-            expected_revenue=None  # Нет эталона
+            expected_revenue=None,  # Нет эталона
         )
 
     async def test_7_days_period(self) -> TestResult:
-        """
-        ТЕСТ 2: Период 7 дней
+        """ТЕСТ 2: Период 7 дней
         Цель: Проверка дедупликации на 1-2 чанках
         """
         logger.info("=" * 80)
         logger.info("🧪 ТЕСТ 2: ПЕРИОД 7 ДНЕЙ")
         logger.info("=" * 80)
 
-        date_to = datetime.now().strftime('%Y-%m-%d')
-        date_from = (datetime.now() - timedelta(days=7)).strftime('%Y-%m-%d')
+        date_to = datetime.now().strftime("%Y-%m-%d")
+        date_from = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
 
         return await self._run_test(
             test_name="Тест 2: Период 7 дней",
             date_from=date_from,
             date_to=date_to,
-            expected_revenue=None
+            expected_revenue=None,
         )
 
     async def test_30_days_period(self) -> TestResult:
-        """
-        ТЕСТ 3: Период 30 дней (1 месяц)
+        """ТЕСТ 3: Период 30 дней (1 месяц)
         Цель: Проверка дедупликации на 1-2 чанках
         """
         logger.info("=" * 80)
         logger.info("🧪 ТЕСТ 3: ПЕРИОД 30 ДНЕЙ")
         logger.info("=" * 80)
 
-        date_to = datetime.now().strftime('%Y-%m-%d')
-        date_from = (datetime.now() - timedelta(days=30)).strftime('%Y-%m-%d')
+        date_to = datetime.now().strftime("%Y-%m-%d")
+        date_from = (datetime.now() - timedelta(days=30)).strftime("%Y-%m-%d")
 
         return await self._run_test(
             test_name="Тест 3: Период 30 дней",
             date_from=date_from,
             date_to=date_to,
-            expected_revenue=None
+            expected_revenue=None,
         )
 
     async def test_january_2025_reference(self) -> TestResult:
-        """
-        ТЕСТ 4: Январь 2025 (ЭТАЛОННЫЙ)
+        """ТЕСТ 4: Январь 2025 (ЭТАЛОННЫЙ)
         Цель: Проверка на известных данных из аудита
         Ожидается: ~113,595₽ заказы, ~60,688₽ выкупы
         """
@@ -170,28 +168,23 @@ class ValidationTestSuite:
         logger.info("🧪 ТЕСТ 4: ЯНВАРЬ 2025 (ЭТАЛОННЫЙ)")
         logger.info("=" * 80)
 
-        ref = self.reference_data['january_2025']
+        ref = self.reference_data["january_2025"]
 
-        logger.info(f"📋 Эталонные данные:")
+        logger.info("📋 Эталонные данные:")
         logger.info(f"   Ожидаемые заказы: {ref['expected_orders_value']:,.0f} ₽")
         logger.info(f"   Ожидаемые выкупы: {ref['expected_sales_value']:,.0f} ₽")
 
         return await self._run_test(
             test_name="Тест 4: Январь 2025 (эталонный)",
-            date_from=ref['date_from'],
-            date_to=ref['date_to'],
-            expected_revenue=ref['expected_sales_value']
+            date_from=ref["date_from"],
+            date_to=ref["date_to"],
+            expected_revenue=ref["expected_sales_value"],
         )
 
     async def _run_test(
-        self,
-        test_name: str,
-        date_from: str,
-        date_to: str,
-        expected_revenue: Optional[float] = None
+        self, test_name: str, date_from: str, date_to: str, expected_revenue: float | None = None
     ) -> TestResult:
-        """
-        Выполнение одного теста
+        """Выполнение одного теста
 
         Этапы:
         1. Получение сырых данных (с подсчетом)
@@ -200,14 +193,14 @@ class ValidationTestSuite:
         4. Расчет финансовых метрик
         5. Сравнение с эталоном (если есть)
         """
-
         logger.info(f"\n{'='*80}")
         logger.info(f"🔬 {test_name}")
         logger.info(f"📅 Период: {date_from} - {date_to}")
         logger.info(f"{'='*80}\n")
 
-        period_days = (datetime.strptime(date_to, '%Y-%m-%d') -
-                      datetime.strptime(date_from, '%Y-%m-%d')).days + 1
+        period_days = (
+            datetime.strptime(date_to, "%Y-%m-%d") - datetime.strptime(date_from, "%Y-%m-%d")
+        ).days + 1
 
         try:
             # ШАГ 1: Получение сырых данных
@@ -227,7 +220,7 @@ class ValidationTestSuite:
             duplicates_in_raw = 0
 
             for sale in raw_sales:
-                sale_id = sale.get('saleID')
+                sale_id = sale.get("saleID")
                 if sale_id:
                     if sale_id in unique_sale_ids:
                         duplicates_in_raw += 1
@@ -236,10 +229,14 @@ class ValidationTestSuite:
 
             unique_records_count = len(unique_sale_ids)
             duplicates_removed = duplicates_in_raw
-            deduplication_percent = (duplicates_removed / raw_records_count * 100) if raw_records_count > 0 else 0
+            deduplication_percent = (
+                (duplicates_removed / raw_records_count * 100) if raw_records_count > 0 else 0
+            )
 
             logger.info(f"   Уникальных saleID: {unique_records_count}")
-            logger.info(f"   Дубликатов найдено: {duplicates_removed} ({deduplication_percent:.1f}%)")
+            logger.info(
+                f"   Дубликатов найдено: {duplicates_removed} ({deduplication_percent:.1f}%)"
+            )
 
             if duplicates_removed == 0:
                 logger.info("   ✅ Дублирование отсутствует - дедупликация работает!")
@@ -255,7 +252,7 @@ class ValidationTestSuite:
             from real_data_reports import is_date_in_range
 
             for sale in raw_sales:
-                record_date = sale.get('date', '')
+                record_date = sale.get("date", "")
                 if not record_date:
                     date_parsing_errors += 1
                     continue
@@ -263,7 +260,7 @@ class ValidationTestSuite:
                 try:
                     if not is_date_in_range(record_date, date_from, date_to):
                         records_outside_period += 1
-                except Exception as e:
+                except Exception:
                     date_parsing_errors += 1
 
             logger.info(f"   Записей вне периода: {records_outside_period}")
@@ -272,17 +269,17 @@ class ValidationTestSuite:
             if records_outside_period == 0 and date_parsing_errors == 0:
                 logger.info("   ✅ Фильтрация дат работает корректно!")
             else:
-                logger.warning(f"   ⚠️ Обнаружены проблемы с фильтрацией дат")
+                logger.warning("   ⚠️ Обнаружены проблемы с фильтрацией дат")
 
             # ШАГ 4: Получение финансовых метрик через систему отчетов
             logger.info("\n💰 ШАГ 4: Расчет финансовых метрик...")
 
             result = await self.reports.get_real_wb_data(date_from, date_to)
 
-            net_revenue_to_seller = result.get('revenue', 0)
-            gross_sales_value = result.get('gross_sales_value', 0)
-            wb_total_deductions = result.get('wb_total_deductions', 0)
-            units_sold = result.get('units', 0)
+            net_revenue_to_seller = result.get("revenue", 0)
+            gross_sales_value = result.get("gross_sales_value", 0)
+            wb_total_deductions = result.get("wb_total_deductions", 0)
+            units_sold = result.get("units", 0)
 
             logger.info(f"   💵 Чистая выручка (forPay): {net_revenue_to_seller:,.2f} ₽")
             logger.info(f"   💰 Валовая стоимость (priceWithDisc): {gross_sales_value:,.2f} ₽")
@@ -295,10 +292,12 @@ class ValidationTestSuite:
             notes = []
 
             if expected_revenue is not None:
-                logger.info(f"\n🎯 ШАГ 5: Сравнение с эталонными данными...")
+                logger.info("\n🎯 ШАГ 5: Сравнение с эталонными данными...")
 
                 deviation = abs(net_revenue_to_seller - expected_revenue)
-                accuracy_percent = 100 - (deviation / expected_revenue * 100) if expected_revenue > 0 else 0
+                accuracy_percent = (
+                    100 - (deviation / expected_revenue * 100) if expected_revenue > 0 else 0
+                )
 
                 logger.info(f"   Ожидаемая выручка: {expected_revenue:,.2f} ₽")
                 logger.info(f"   Фактическая выручка: {net_revenue_to_seller:,.2f} ₽")
@@ -313,8 +312,8 @@ class ValidationTestSuite:
                     logger.warning(f"   ❌ ТЕСТ НЕ ПРОЙДЕН: Точность {accuracy_percent:.1f}% < 95%")
                     notes.append(f"Точность {accuracy_percent:.1f}% ниже порога 95%")
             else:
-                logger.info(f"\n📊 ШАГ 5: Эталонные данные отсутствуют")
-                logger.info(f"   Проверка только корректности обработки")
+                logger.info("\n📊 ШАГ 5: Эталонные данные отсутствуют")
+                logger.info("   Проверка только корректности обработки")
 
                 # Базовые проверки
                 if duplicates_removed == 0 and records_outside_period == 0:
@@ -346,7 +345,7 @@ class ValidationTestSuite:
                 expected_revenue=expected_revenue,
                 accuracy_percent=accuracy_percent,
                 test_passed=test_passed,
-                notes="; ".join(notes) if notes else "OK"
+                notes="; ".join(notes) if notes else "OK",
             )
 
             logger.info(f"\n{'='*80}")
@@ -374,13 +373,11 @@ class ValidationTestSuite:
                 records_outside_period=0,
                 date_parsing_errors=0,
                 test_passed=False,
-                notes=f"Ошибка: {str(e)}"
+                notes=f"Ошибка: {e!s}",
             )
 
     async def run_all_tests(self) -> ValidationReport:
-        """
-        Запуск всех тестов и формирование итогового отчета
-        """
+        """Запуск всех тестов и формирование итогового отчета"""
         logger.info("\n" + "=" * 80)
         logger.info("🚀 ЗАПУСК КОМПЛЕКСНОГО НАБОРА ТЕСТОВ")
         logger.info("=" * 80)
@@ -404,14 +401,22 @@ class ValidationTestSuite:
         # Общие метрики
         total_duplicates = sum(t.duplicates_removed for t in test_results)
         total_records = sum(t.raw_records_count for t in test_results)
-        deduplication_effectiveness = (total_duplicates / total_records * 100) if total_records > 0 else 0
+        deduplication_effectiveness = (
+            (total_duplicates / total_records * 100) if total_records > 0 else 0
+        )
 
         total_outside_period = sum(t.records_outside_period for t in test_results)
-        date_filtering_quality = 100 - (total_outside_period / total_records * 100) if total_records > 0 else 100
+        date_filtering_quality = (
+            100 - (total_outside_period / total_records * 100) if total_records > 0 else 100
+        )
 
         # Общая точность (только для тестов с эталоном)
         accuracy_tests = [t for t in test_results if t.accuracy_percent is not None]
-        overall_accuracy = sum(t.accuracy_percent for t in accuracy_tests) / len(accuracy_tests) if accuracy_tests else 0
+        overall_accuracy = (
+            sum(t.accuracy_percent for t in accuracy_tests) / len(accuracy_tests)
+            if accuracy_tests
+            else 0
+        )
 
         # Рекомендации
         recommendations = []
@@ -422,9 +427,7 @@ class ValidationTestSuite:
                 "Рекомендуется проверить логику chunking."
             )
         elif deduplication_effectiveness == 0:
-            recommendations.append(
-                "✅ Дублирование отсутствует. Дедупликация работает идеально!"
-            )
+            recommendations.append("✅ Дублирование отсутствует. Дедупликация работает идеально!")
 
         if date_filtering_quality < 99:
             recommendations.append(
@@ -432,9 +435,7 @@ class ValidationTestSuite:
                 "Рекомендуется улучшить фильтрацию дат."
             )
         else:
-            recommendations.append(
-                "✅ Фильтрация дат работает корректно!"
-            )
+            recommendations.append("✅ Фильтрация дат работает корректно!")
 
         if overall_accuracy >= 95:
             recommendations.append(
@@ -464,7 +465,7 @@ class ValidationTestSuite:
 
         # Формирование отчета
         report = ValidationReport(
-            report_date=datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            report_date=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             tests_total=tests_total,
             tests_passed=tests_passed,
             tests_failed=tests_failed,
@@ -473,7 +474,7 @@ class ValidationTestSuite:
             date_filtering_quality=date_filtering_quality,
             test_results=test_results,
             recommendations=recommendations,
-            summary=summary
+            summary=summary,
         )
 
         # Вывод итогового отчета
@@ -498,7 +499,7 @@ class ValidationTestSuite:
         # Конвертация в dict
         report_dict = asdict(report)
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(report_dict, f, ensure_ascii=False, indent=2)
 
         logger.info(f"\n💾 Отчет сохранен: {filepath}")
@@ -516,7 +517,7 @@ async def main():
     # Сохранение отчета
     report_path = suite.save_report(report)
 
-    logger.info(f"\n✅ ТЕСТИРОВАНИЕ ЗАВЕРШЕНО")
+    logger.info("\n✅ ТЕСТИРОВАНИЕ ЗАВЕРШЕНО")
     logger.info(f"📊 Отчет: {report_path}")
 
     return report

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-REAL DATA REPORTS - 100% реальные данные из API
+"""REAL DATA REPORTS - 100% реальные данные из API
 НИКАКИХ фейков, заглушек, демо-данных!
 """
 
@@ -8,20 +7,18 @@ import asyncio
 import json
 import logging
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
-import pandas as pd
+from typing import Any
 
 import api_clients_main as api_clients
+from api_chunking import ChunkedAPIManager
 from config import Config
 from db import save_pnl_data
-from api_chunking import ChunkedAPIManager
 
 logger = logging.getLogger(__name__)
 
 
 def is_date_in_range(record_date_str: str, date_from: str, date_to: str) -> bool:
-    """
-    Проверка даты записи на вхождение в диапазон
+    """Проверка даты записи на вхождение в диапазон
 
     КРИТИЧЕСКОЕ ИСПРАВЛЕНИЕ (30.09.2025):
     Использует datetime объекты вместо строкового сравнения для корректной
@@ -34,12 +31,13 @@ def is_date_in_range(record_date_str: str, date_from: str, date_to: str) -> bool
 
     Returns:
         True если дата в диапазоне, False если нет или ошибка парсинга
+
     """
     try:
         # Парсим дату записи (убираем время если есть)
-        if 'T' in record_date_str:
+        if "T" in record_date_str:
             # ISO формат с временем: 2025-01-15T12:34:56Z
-            record_date = datetime.fromisoformat(record_date_str.split('T')[0])
+            record_date = datetime.fromisoformat(record_date_str.split("T")[0])
         else:
             # Простой формат: 2025-01-15
             record_date = datetime.fromisoformat(record_date_str[:10])
@@ -64,11 +62,12 @@ class RealDataFinancialReports:
         self.ozon_api = api_clients.ozon_api
         self.chunked_api = ChunkedAPIManager(api_clients)
 
-    async def get_real_wb_data(self, date_from: str, date_to: str) -> Dict[str, Any]:
+    async def get_real_wb_data(self, date_from: str, date_to: str) -> dict[str, Any]:
         """Получение ПОЛНЫХ данных WB: И заказы И продажи (выкупы) с детальным разбором"""
         try:
             # ВСЕГДА используем chunked API для получения данных за указанный период
             from datetime import datetime
+
             start_date = datetime.strptime(date_from, "%Y-%m-%d")
             end_date = datetime.strptime(date_to, "%Y-%m-%d")
             period_days = (end_date - start_date).days
@@ -102,25 +101,33 @@ class RealDataFinancialReports:
 
             # ДИАГНОСТИКА ORDERS DATA
             if orders_data:
-                logger.info(f"=== ДИАГНОСТИКА WB ORDERS DATA ===")
+                logger.info("=== ДИАГНОСТИКА WB ORDERS DATA ===")
                 sample_orders = orders_data[:3]
                 for i, order in enumerate(sample_orders):
-                    logger.info(f"Заказ {i+1}: totalPrice={order.get('totalPrice', 0)}, priceWithDisc={order.get('priceWithDisc', 0)}, odid={order.get('odid', 'нет')}")
-                total_orders = sum(o.get('priceWithDisc', 0) for o in orders_data)
-                total_orders_full = sum(o.get('totalPrice', 0) for o in orders_data)
-                logger.info(f"ВСЕГО ЗАКАЗОВ: priceWithDisc={total_orders:,.0f}, totalPrice={total_orders_full:,.0f}")
-                logger.info(f"=== КОНЕЦ ДИАГНОСТИКИ ORDERS ===")
+                    logger.info(
+                        f"Заказ {i+1}: totalPrice={order.get('totalPrice', 0)}, priceWithDisc={order.get('priceWithDisc', 0)}, odid={order.get('odid', 'нет')}"
+                    )
+                total_orders = sum(o.get("priceWithDisc", 0) for o in orders_data)
+                total_orders_full = sum(o.get("totalPrice", 0) for o in orders_data)
+                logger.info(
+                    f"ВСЕГО ЗАКАЗОВ: priceWithDisc={total_orders:,.0f}, totalPrice={total_orders_full:,.0f}"
+                )
+                logger.info("=== КОНЕЦ ДИАГНОСТИКИ ORDERS ===")
 
             # ДИАГНОСТИКА SALES DATA
             if sales_data:
-                logger.info(f"=== ДИАГНОСТИКА WB SALES DATA ===")
+                logger.info("=== ДИАГНОСТИКА WB SALES DATA ===")
                 sample_sales = sales_data[:3]
                 for i, sale in enumerate(sample_sales):
-                    logger.info(f"Продажа {i+1}: forPay={sale.get('forPay', 0)}, priceWithDisc={sale.get('priceWithDisc', 0)}, saleID={sale.get('saleID', 'нет')}")
-                total_sales = sum(s.get('forPay', 0) for s in sales_data)
-                total_sales_disc = sum(s.get('priceWithDisc', 0) for s in sales_data)
-                logger.info(f"ВСЕГО ПРОДАЖ: forPay={total_sales:,.0f}, priceWithDisc={total_sales_disc:,.0f}")
-                logger.info(f"=== КОНЕЦ ДИАГНОСТИКИ SALES ===")
+                    logger.info(
+                        f"Продажа {i+1}: forPay={sale.get('forPay', 0)}, priceWithDisc={sale.get('priceWithDisc', 0)}, saleID={sale.get('saleID', 'нет')}"
+                    )
+                total_sales = sum(s.get("forPay", 0) for s in sales_data)
+                total_sales_disc = sum(s.get("priceWithDisc", 0) for s in sales_data)
+                logger.info(
+                    f"ВСЕГО ПРОДАЖ: forPay={total_sales:,.0f}, priceWithDisc={total_sales_disc:,.0f}"
+                )
+                logger.info("=== КОНЕЦ ДИАГНОСТИКИ SALES ===")
 
             # Выбираем основной источник данных для расчетов
             # Приоритет: Sales API (точные данные о выкупах)
@@ -145,14 +152,14 @@ class RealDataFinancialReports:
 
             # ОСНОВНЫЕ МЕТРИКИ (что реально получит продавец)
             net_revenue_to_seller = 0  # forPay - чистая выручка к перечислению продавцу
-            total_units = 0            # Количество проданных единиц
+            total_units = 0  # Количество проданных единиц
 
             # ДОПОЛНИТЕЛЬНЫЕ МЕТРИКИ (для аналитики)
-            gross_sales_value = 0      # priceWithDisc - валовая стоимость продаж (до удержаний WB)
-            wb_total_deductions = 0    # Все удержания WB = priceWithDisc - forPay
-            wb_commission = 0          # Комиссия WB (~80% от удержаний)
-            wb_logistics_costs = 0     # Логистика, хранение (~20% от удержаний)
-            spp_compensation = 0       # СПП компенсация (не является расходом)
+            gross_sales_value = 0  # priceWithDisc - валовая стоимость продаж (до удержаний WB)
+            wb_total_deductions = 0  # Все удержания WB = priceWithDisc - forPay
+            wb_commission = 0  # Комиссия WB (~80% от удержаний)
+            wb_logistics_costs = 0  # Логистика, хранение (~20% от удержаний)
+            spp_compensation = 0  # СПП компенсация (не является расходом)
 
             # СЧЕТЧИКИ
             delivered_count = 0
@@ -160,9 +167,9 @@ class RealDataFinancialReports:
 
             # Разбор операций WB
             operation_breakdown = {
-                'sales': {'count': 0, 'revenue': 0, 'commission': 0},
-                'returns': {'count': 0, 'amount': 0},
-                'logistics': {'count': 0, 'amount': 0}
+                "sales": {"count": 0, "revenue": 0, "commission": 0},
+                "returns": {"count": 0, "amount": 0},
+                "logistics": {"count": 0, "amount": 0},
             }
 
             for record in main_data:
@@ -170,7 +177,7 @@ class RealDataFinancialReports:
                 # API может возвращать данные за соседние периоды - нужна строгая фильтрация
                 # Используем datetime объекты вместо строкового сравнения
 
-                record_date_str = record.get('date', '')
+                record_date_str = record.get("date", "")
                 if not record_date_str:
                     logger.warning(f"⚠️ Запись без даты: {record}")
                     continue
@@ -186,14 +193,16 @@ class RealDataFinancialReports:
                     is_supply = False
                 else:
                     # Логика для Sales API (реальные продажи)
-                    is_realization = record.get('isRealization', False)
-                    is_supply = record.get('isSupply', False)
+                    is_realization = record.get("isRealization", False)
+                    is_supply = record.get("isSupply", False)
 
                 # Основные финансовые поля WB
-                for_pay = record.get('forPay', 0) or 0  # Реальная выручка (только в Sales API)
-                total_price = record.get('totalPrice', 0) or 0  # Полная цена
-                price_with_disc = record.get('priceWithDisc', 0) or 0  # Цена после скидки продавца
-                finished_price = record.get('finishedPrice', 0) or 0  # Цена после СПП (только в Sales API)
+                for_pay = record.get("forPay", 0) or 0  # Реальная выручка (только в Sales API)
+                total_price = record.get("totalPrice", 0) or 0  # Полная цена
+                price_with_disc = record.get("priceWithDisc", 0) or 0  # Цена после скидки продавца
+                finished_price = (
+                    record.get("finishedPrice", 0) or 0
+                )  # Цена после СПП (только в Sales API)
 
                 # Для Orders API forPay и finishedPrice не существуют
                 if data_source == "orders":
@@ -230,25 +239,29 @@ class RealDataFinancialReports:
 
                     # 6. СПП КОМПЕНСАЦИЯ (отдельно, не является расходом)
                     if finished_price > 0:
-                        spp_comp = price_with_disc - finished_price if price_with_disc > finished_price else 0
+                        spp_comp = (
+                            price_with_disc - finished_price
+                            if price_with_disc > finished_price
+                            else 0
+                        )
                         spp_compensation += spp_comp
 
                     # 7. ГРУППИРОВКА ДЛЯ ОТЧЕТНОСТИ
-                    operation_breakdown['sales']['count'] += 1
-                    operation_breakdown['sales']['revenue'] += for_pay  # Чистая выручка
-                    operation_breakdown['sales']['commission'] += commission_amount
+                    operation_breakdown["sales"]["count"] += 1
+                    operation_breakdown["sales"]["revenue"] += for_pay  # Чистая выручка
+                    operation_breakdown["sales"]["commission"] += commission_amount
 
                 elif not is_realization and is_supply:
                     # Это возврат или отмена
                     returned_count += 1
                     return_amount = total_price
 
-                    operation_breakdown['returns']['count'] += 1
-                    operation_breakdown['returns']['amount'] += return_amount
+                    operation_breakdown["returns"]["count"] += 1
+                    operation_breakdown["returns"]["amount"] += return_amount
 
             # ФИНАЛЬНЫЕ РАСЧЕТЫ (ИСПРАВЛЕНО #3)
-            operation_breakdown['logistics']['count'] = delivered_count
-            operation_breakdown['logistics']['amount'] = wb_logistics_costs
+            operation_breakdown["logistics"]["count"] = delivered_count
+            operation_breakdown["logistics"]["amount"] = wb_logistics_costs
 
             # Процент удержаний WB от валовой стоимости
             wb_deduction_percent = 0
@@ -263,22 +276,33 @@ class RealDataFinancialReports:
             net_profit = net_revenue_to_seller - total_cogs
 
             # ЛОГИРОВАНИЕ (улучшенное)
-            logger.info(f"")
+            logger.info("")
             logger.info(f"📊 WB ДЕТАЛЬНЫЙ АНАЛИЗ ({len(sales_data)} записей):")
             logger.info(f"  💰 Валовая стоимость продаж: {gross_sales_value:,.2f} ₽")
-            logger.info(f"  📉 Удержания WB: {wb_total_deductions:,.2f} ₽ ({wb_deduction_percent:.1f}%)")
-            logger.info(f"     ├─ Комиссия WB: {wb_commission:,.2f} ₽ ({wb_commission/gross_sales_value*100:.1f}%)" if gross_sales_value > 0 else f"     ├─ Комиссия WB: {wb_commission:,.2f} ₽")
-            logger.info(f"     └─ Логистика: {wb_logistics_costs:,.2f} ₽ ({wb_logistics_costs/gross_sales_value*100:.1f}%)" if gross_sales_value > 0 else f"     └─ Логистика: {wb_logistics_costs:,.2f} ₽")
+            logger.info(
+                f"  📉 Удержания WB: {wb_total_deductions:,.2f} ₽ ({wb_deduction_percent:.1f}%)"
+            )
+            logger.info(
+                f"     ├─ Комиссия WB: {wb_commission:,.2f} ₽ ({wb_commission/gross_sales_value*100:.1f}%)"
+                if gross_sales_value > 0
+                else f"     ├─ Комиссия WB: {wb_commission:,.2f} ₽"
+            )
+            logger.info(
+                f"     └─ Логистика: {wb_logistics_costs:,.2f} ₽ ({wb_logistics_costs/gross_sales_value*100:.1f}%)"
+                if gross_sales_value > 0
+                else f"     └─ Логистика: {wb_logistics_costs:,.2f} ₽"
+            )
             logger.info(f"  ✅ К перечислению продавцу: {net_revenue_to_seller:,.2f} ₽")
             logger.info(f"  📦 Единиц продано: {total_units}")
             logger.info(f"  💵 Себестоимость: {total_cogs:,.2f} ₽")
             logger.info(f"  💎 ЧИСТАЯ ПРИБЫЛЬ: {net_profit:,.2f} ₽")
-            logger.info(f"")
+            logger.info("")
 
             # Получаем информацию о рекламных кампаниях WB (доступные данные)
             try:
-                logger.info(f"Получение информации о рекламных кампаниях WB...")
+                logger.info("Получение информации о рекламных кампаниях WB...")
                 from api_clients_main import WBBusinessAPI
+
                 wb_business = WBBusinessAPI()
                 campaigns_data = await wb_business.get_advertising_campaigns()
 
@@ -288,15 +312,18 @@ class RealDataFinancialReports:
                 # ИСПРАВЛЕНИЕ: Получаем расходы из системы управления рекламными расходами
                 try:
                     from advertising_expenses import get_ads_expenses
+
                     ads_expenses = get_ads_expenses()
-                    wb_advertising_costs = ads_expenses.get('wb_advertising', 0)
+                    wb_advertising_costs = ads_expenses.get("wb_advertising", 0)
                     logger.info(f"  💰 WB реклама (ручной ввод): {wb_advertising_costs:,.2f} ₽")
                 except Exception as ads_error:
                     logger.warning(f"Ошибка получения рекламных расходов: {ads_error}")
                     wb_advertising_costs = 0
 
-                logger.info(f"  📊 WB реклама: {campaign_count} всего кампаний, {active_campaigns} активных")
-                logger.info(f"  💰 Расходы: будут учтены через систему управления расходами")
+                logger.info(
+                    f"  📊 WB реклама: {campaign_count} всего кампаний, {active_campaigns} активных"
+                )
+                logger.info("  💰 Расходы: будут учтены через систему управления расходами")
 
             except Exception as e:
                 logger.error(f"Ошибка получения информации о кампаниях WB: {e}")
@@ -309,26 +336,32 @@ class RealDataFinancialReports:
             logger.info(f"  Чистая прибыль: {(net_profit - wb_advertising_costs):,.2f} ₽")
 
             # ДИАГНОСТИКА ИТОГОВЫХ РАСЧЕТОВ (ОБНОВЛЕНО #3)
-            logger.info(f"=== ИТОГОВЫЕ РАСЧЕТЫ WB ===")
+            logger.info("=== ИТОГОВЫЕ РАСЧЕТЫ WB ===")
             logger.info(f"Основной источник: {data_source}")
             logger.info(f"💰 Валовая стоимость продаж (priceWithDisc): {gross_sales_value:,.0f} ₽")
             logger.info(f"✅ Чистая выручка к продавцу (forPay): {net_revenue_to_seller:,.0f} ₽")
             logger.info(f"📉 Удержания WB: {wb_total_deductions:,.0f} ₽")
             logger.info(f"📦 Единиц продано: {total_units}")
-            logger.info(f"ВНИМАНИЕ: В отчете используется net_revenue_to_seller (forPay)")
-            logger.info(f"=== КОНЕЦ ИТОГОВЫХ РАСЧЕТОВ ===")
+            logger.info("ВНИМАНИЕ: В отчете используется net_revenue_to_seller (forPay)")
+            logger.info("=== КОНЕЦ ИТОГОВЫХ РАСЧЕТОВ ===")
 
             # Подготавливаем данные по заказам и выкупам
             orders_stats = {
                 "count": len(orders_data) if orders_data else 0,
-                "total_price": sum(o.get('totalPrice', 0) for o in orders_data) if orders_data else 0,
-                "price_with_disc": sum(o.get('priceWithDisc', 0) for o in orders_data) if orders_data else 0
+                "total_price": (
+                    sum(o.get("totalPrice", 0) for o in orders_data) if orders_data else 0
+                ),
+                "price_with_disc": (
+                    sum(o.get("priceWithDisc", 0) for o in orders_data) if orders_data else 0
+                ),
             }
 
             sales_stats = {
                 "count": len(sales_data) if sales_data else 0,
-                "for_pay": sum(s.get('forPay', 0) for s in sales_data) if sales_data else 0,
-                "price_with_disc": sum(s.get('priceWithDisc', 0) for s in sales_data) if sales_data else 0
+                "for_pay": sum(s.get("forPay", 0) for s in sales_data) if sales_data else 0,
+                "price_with_disc": (
+                    sum(s.get("priceWithDisc", 0) for s in sales_data) if sales_data else 0
+                ),
             }
 
             # Расчет процента выкупа
@@ -340,82 +373,86 @@ class RealDataFinancialReports:
             return {
                 # ОСНОВНЫЕ МЕТРИКИ (что реально важно для бизнеса)
                 "revenue": net_revenue_to_seller,  # ✅ ИСПРАВЛЕНО: чистая выручка к продавцу (forPay)
-                "units": total_units,              # Количество проданных единиц
-                "cogs": total_cogs,                # Себестоимость
-                "commission": wb_commission,       # Комиссия WB
+                "units": total_units,  # Количество проданных единиц
+                "cogs": total_cogs,  # Себестоимость
+                "commission": wb_commission,  # Комиссия WB
                 "profit": net_profit - wb_advertising_costs,  # Чистая прибыль с учетом рекламы
-
                 # ДОПОЛНИТЕЛЬНЫЕ ФИНАНСОВЫЕ МЕТРИКИ
-                "gross_sales_value": gross_sales_value,       # Валовая стоимость продаж (priceWithDisc)
+                "gross_sales_value": gross_sales_value,  # Валовая стоимость продаж (priceWithDisc)
                 "net_revenue_to_seller": net_revenue_to_seller,  # Alias для ясности
-                "wb_total_deductions": wb_total_deductions,   # Все удержания WB
-                "wb_logistics_costs": wb_logistics_costs,     # Логистика и хранение
-                "spp_compensation": spp_compensation,         # СПП компенсация
-                "advertising_costs": wb_advertising_costs,    # Расходы на рекламу WB
-
+                "wb_total_deductions": wb_total_deductions,  # Все удержания WB
+                "wb_logistics_costs": wb_logistics_costs,  # Логистика и хранение
+                "spp_compensation": spp_compensation,  # СПП компенсация
+                "advertising_costs": wb_advertising_costs,  # Расходы на рекламу WB
                 # LEGACY ПОЛЯ (для обратной совместимости)
                 "final_revenue": net_revenue_to_seller,  # Alias
-                "logistics_costs": wb_logistics_costs,   # Alias
-                "additional_fees": wb_logistics_costs,   # Alias
-
+                "logistics_costs": wb_logistics_costs,  # Alias
+                "additional_fees": wb_logistics_costs,  # Alias
                 # СТАТИСТИКА ЗАКАЗОВ И ПРОДАЖ
-                "orders_stats": orders_stats,        # Подробная статистика заказов
-                "sales_stats": sales_stats,          # Подробная статистика продаж
-                "buyout_rate": buyout_rate,          # Процент выкупа
+                "orders_stats": orders_stats,  # Подробная статистика заказов
+                "sales_stats": sales_stats,  # Подробная статистика продаж
+                "buyout_rate": buyout_rate,  # Процент выкупа
                 "delivered_count": delivered_count,  # Количество доставленных
-                "returned_count": returned_count,    # Количество возвратов
-
+                "returned_count": returned_count,  # Количество возвратов
                 # МЕТАДАННЫЕ
-                "data_source": data_source,          # Источник расчета (orders/sales)
+                "data_source": data_source,  # Источник расчета (orders/sales)
                 "operation_breakdown": operation_breakdown,  # Детальный разбор операций
-                "advertising_breakdown": advertising_data,   # Детальный разбор рекламы
+                "advertising_breakdown": advertising_data,  # Детальный разбор рекламы
                 "campaigns_info": {
                     "total_campaigns": campaign_count,
                     "active_campaigns": active_campaigns,
-                    "campaigns_data": campaigns_data
+                    "campaigns_data": campaigns_data,
                 },
-
                 # RAW DATA для staged_processor
                 "orders": orders_data or [],  # Массив заказов
-                "sales": sales_data or [],    # Массив продаж
-                "sales_data": sales_data      # Legacy alias
+                "sales": sales_data or [],  # Массив продаж
+                "sales_data": sales_data,  # Legacy alias
             }
 
         except Exception as e:
             logger.error(f"Ошибка получения реальных продаж WB: {e}")
             return {"revenue": 0, "units": 0, "cogs": 0, "commission": 0, "profit": 0}
 
-    async def _calculate_real_cogs_wb(self, sales_data: List[Dict], date_from: str, date_to: str) -> float:
+    async def _calculate_real_cogs_wb(
+        self, sales_data: list[dict], date_from: str, date_to: str
+    ) -> float:
         """Расчет реальной себестоимости WB по шаблону"""
         try:
             # Загружаем актуальные данные себестоимости
-            import json
             import glob
+            import json
             import os
 
             # Ищем последний файл с данными себестоимости
-            cost_files = glob.glob('/root/sovani_bot/cost_data/cost_data_*.json')
+            cost_files = glob.glob("/root/sovani_bot/cost_data/cost_data_*.json")
             if not cost_files:
-                cost_files = glob.glob('/root/sovani_bot/processed_costs/processed_cost_data_*.json')
+                cost_files = glob.glob(
+                    "/root/sovani_bot/processed_costs/processed_cost_data_*.json"
+                )
 
             cost_data = None
             if cost_files:
                 latest_file = max(cost_files, key=os.path.getctime)
-                with open(latest_file, 'r', encoding='utf-8') as f:
+                with open(latest_file, encoding="utf-8") as f:
                     cost_data = json.load(f)
                 logger.debug(f"Загружены данные себестоимости из {latest_file}")
             else:
                 logger.warning("Не найдены файлы себестоимости")
 
-            if not cost_data or not cost_data.get('sku_costs'):
+            if not cost_data or not cost_data.get("sku_costs"):
                 logger.warning("Нет данных себестоимости, используем Config.COST_PRICE")
                 # Fallback на старый метод
-                delivered_count = sum(1 for sale in sales_data
-                                    if sale.get('isRealization') and
-                                    date_from <= sale.get('date', '')[:10] <= date_to)
-                return delivered_count * (Config.COST_PRICE if hasattr(Config, 'COST_PRICE') else 600)
+                delivered_count = sum(
+                    1
+                    for sale in sales_data
+                    if sale.get("isRealization")
+                    and date_from <= sale.get("date", "")[:10] <= date_to
+                )
+                return delivered_count * (
+                    Config.COST_PRICE if hasattr(Config, "COST_PRICE") else 600
+                )
 
-            sku_costs = cost_data.get('sku_costs', {})
+            sku_costs = cost_data.get("sku_costs", {})
             total_cogs = 0
             matched_units = 0
             unmatched_units = 0
@@ -424,12 +461,12 @@ class RealDataFinancialReports:
             sales_by_sku = {}
             for sale in sales_data:
                 # Фильтр по периоду
-                sale_date = sale.get('date', '')[:10]
+                sale_date = sale.get("date", "")[:10]
                 if not (date_from <= sale_date <= date_to):
                     continue
 
-                if sale.get('isRealization'):  # Только реализованные
-                    sku = sale.get('supplierArticle', 'Unknown')
+                if sale.get("isRealization"):  # Только реализованные
+                    sku = sale.get("supplierArticle", "Unknown")
                     if sku not in sales_by_sku:
                         sales_by_sku[sku] = 0
                     sales_by_sku[sku] += 1
@@ -438,7 +475,7 @@ class RealDataFinancialReports:
             for sku, count in sales_by_sku.items():
                 wb_key = f"WB_{sku}"
                 if wb_key in sku_costs:
-                    cost_per_unit = sku_costs[wb_key].get('cost_per_unit', 0)
+                    cost_per_unit = sku_costs[wb_key].get("cost_per_unit", 0)
                     total_cogs += cost_per_unit * count
                     matched_units += count
                     logger.debug(f"WB COGS: {sku} × {count} = {cost_per_unit * count:.2f} ₽")
@@ -447,49 +484,61 @@ class RealDataFinancialReports:
                     avg_cost = 600  # Средняя себестоимость для пижам
                     total_cogs += avg_cost * count
                     unmatched_units += count
-                    logger.warning(f"WB COGS fallback: {sku} × {count} = {avg_cost * count:.2f} ₽ (нет в шаблоне)")
+                    logger.warning(
+                        f"WB COGS fallback: {sku} × {count} = {avg_cost * count:.2f} ₽ (нет в шаблоне)"
+                    )
 
-            logger.info(f"WB себестоимость: {total_cogs:,.2f} ₽ ({matched_units} найдено + {unmatched_units} fallback)")
+            logger.info(
+                f"WB себестоимость: {total_cogs:,.2f} ₽ ({matched_units} найдено + {unmatched_units} fallback)"
+            )
             return total_cogs
 
         except Exception as e:
             logger.error(f"Ошибка расчета себестоимости WB: {e}")
             # Fallback на старый метод
-            delivered_count = sum(1 for sale in sales_data
-                                if sale.get('isRealization') and
-                                date_from <= sale.get('date', '')[:10] <= date_to)
-            return delivered_count * (Config.COST_PRICE if hasattr(Config, 'COST_PRICE') else 600)
+            delivered_count = sum(
+                1
+                for sale in sales_data
+                if sale.get("isRealization") and date_from <= sale.get("date", "")[:10] <= date_to
+            )
+            return delivered_count * (Config.COST_PRICE if hasattr(Config, "COST_PRICE") else 600)
 
-    async def get_real_ozon_sales(self, date_from: str, date_to: str) -> Dict[str, Any]:
+    async def get_real_ozon_sales(self, date_from: str, date_to: str) -> dict[str, Any]:
         """Получение РЕАЛЬНЫХ продаж Ozon через chunked API с детальным разбором"""
         try:
             # Используем chunked API для получения полных данных Ozon за указанный период
-            logger.info(f"Получение Ozon данных с chunked запросами за период {date_from} - {date_to}")
+            logger.info(
+                f"Получение Ozon данных с chunked запросами за период {date_from} - {date_to}"
+            )
 
             # КРИТИЧНО: Получаем ТОЛЬКО FBS данные для избежания дублирования
             # FBO заказы уже включены в FBS транзакции, не нужно их суммировать дважды
             fbs_data = await self.chunked_api.get_ozon_fbs_chunked(date_from, date_to)
 
-            logger.info(f"🔍 OZON: Используем только FBS транзакции для избежания дублирования")
-            logger.info(f"⚠️  FBO заказы уже учтены в FBS транзакциях")
+            logger.info("🔍 OZON: Используем только FBS транзакции для избежания дублирования")
+            logger.info("⚠️  FBO заказы уже учтены в FBS транзакциях")
 
             # Используем только FBS данные
             all_ozon_data = fbs_data or []
 
-            logger.info(f"Получено {len(all_ozon_data)} записей Ozon через chunked API (только FBS транзакции)")
+            logger.info(
+                f"Получено {len(all_ozon_data)} записей Ozon через chunked API (только FBS транзакции)"
+            )
 
             # ДЕТАЛЬНАЯ ДИАГНОСТИКА OZON ДАННЫХ
             if not all_ozon_data:
                 logger.warning("=== OZON: НЕТ ДАННЫХ ===")
                 logger.warning(f"FBS данные: {len(fbs_data or []) if fbs_data else 0} записей")
             else:
-                logger.info(f"=== ДИАГНОСТИКА OZON DATA ===")
+                logger.info("=== ДИАГНОСТИКА OZON DATA ===")
                 sample_ozon = all_ozon_data[:3]
                 for i, transaction in enumerate(sample_ozon):
-                    operation_type = transaction.get('operation_type', 'unknown')
-                    accruals = transaction.get('accruals_for_sale', 0)
-                    logger.info(f"Ozon транзакция {i+1}: type={operation_type}, accruals={accruals}")
-                logger.info(f"=== КОНЕЦ ДИАГНОСТИКИ OZON ===")
+                    operation_type = transaction.get("operation_type", "unknown")
+                    accruals = transaction.get("accruals_for_sale", 0)
+                    logger.info(
+                        f"Ozon транзакция {i+1}: type={operation_type}, accruals={accruals}"
+                    )
+                logger.info("=== КОНЕЦ ДИАГНОСТИКИ OZON ===")
 
             # Обрабатываем объединенные данные как транзакции
             transactions = all_ozon_data
@@ -507,43 +556,49 @@ class RealDataFinancialReports:
             operation_breakdown = {}
 
             for transaction in transactions:
-                operation_type = transaction.get('operation_type', 'unknown')
-                accruals = float(transaction.get('accruals_for_sale', 0))
-                sale_commission = float(transaction.get('sale_commission', 0))
-                amount = float(transaction.get('amount', 0))
+                operation_type = transaction.get("operation_type", "unknown")
+                accruals = float(transaction.get("accruals_for_sale", 0))
+                sale_commission = float(transaction.get("sale_commission", 0))
+                amount = float(transaction.get("amount", 0))
 
                 # Группируем для отчетности
                 if operation_type not in operation_breakdown:
                     operation_breakdown[operation_type] = {
-                        'count': 0, 'accruals': 0, 'commission': 0, 'amount': 0
+                        "count": 0,
+                        "accruals": 0,
+                        "commission": 0,
+                        "amount": 0,
                     }
 
-                operation_breakdown[operation_type]['count'] += 1
-                operation_breakdown[operation_type]['accruals'] += accruals
-                operation_breakdown[operation_type]['commission'] += sale_commission
-                operation_breakdown[operation_type]['amount'] += amount
+                operation_breakdown[operation_type]["count"] += 1
+                operation_breakdown[operation_type]["accruals"] += accruals
+                operation_breakdown[operation_type]["commission"] += sale_commission
+                operation_breakdown[operation_type]["amount"] += amount
 
                 # Классифицируем по типам затрат
-                if operation_type == 'OperationAgentDeliveredToCustomer':
+                if operation_type == "OperationAgentDeliveredToCustomer":
                     # Доставленные товары - основная выручка
                     delivered_revenue += accruals
                     commission += abs(sale_commission)  # Комиссия с продаж
                     delivered_count += 1
 
-                elif operation_type == 'OperationMarketplaceCostPerClick':
+                elif operation_type == "OperationMarketplaceCostPerClick":
                     # Реклама CPC
                     advertising_costs += abs(amount)
 
-                elif operation_type == 'OperationPromotionWithCostPerOrder':
+                elif operation_type == "OperationPromotionWithCostPerOrder":
                     # Промо-акции
                     promo_costs += abs(amount)
 
-                elif operation_type in ['ClientReturnAgentOperation', 'OperationItemReturn']:
+                elif operation_type in ["ClientReturnAgentOperation", "OperationItemReturn"]:
                     # Возвраты
                     returns_cost += abs(amount)
 
-                elif operation_type in ['OperationMarketplacePackageMaterialsProvision',
-                                      'OperationMarketplacePackageRedistribution', 'TemporaryStorage']:
+                elif operation_type in [
+                    "OperationMarketplacePackageMaterialsProvision",
+                    "OperationMarketplacePackageRedistribution",
+                    "TemporaryStorage",
+                ]:
                     # Логистика и упаковка
                     logistics_costs += abs(amount)
 
@@ -556,11 +611,20 @@ class RealDataFinancialReports:
             total_orders_units = delivered_count
 
             # Вычисляем финальную прибыль
-            total_costs = commission + advertising_costs + promo_costs + returns_cost + logistics_costs + other_costs
+            total_costs = (
+                commission
+                + advertising_costs
+                + promo_costs
+                + returns_cost
+                + logistics_costs
+                + other_costs
+            )
             net_profit = delivered_revenue - total_costs
 
             logger.info(f"Ozon детальный анализ за период {date_from} - {date_to}:")
-            logger.info(f"  Всего заказов: {total_orders_revenue:,.2f} ₽ ({total_orders_units} ед.)")
+            logger.info(
+                f"  Всего заказов: {total_orders_revenue:,.2f} ₽ ({total_orders_units} ед.)"
+            )
             logger.info(f"  Доставлено: {delivered_revenue:,.2f} ₽ ({delivered_count} операций)")
             logger.info(f"  Комиссия: {commission:,.2f} ₽")
             logger.info(f"  Реклама: {advertising_costs:,.2f} ₽")
@@ -586,26 +650,27 @@ class RealDataFinancialReports:
                 "fbo_orders": [],  # ИСПРАВЛЕНИЕ: FBO не используем для избежания дублирования
                 "transactions": transactions or [],  # Массив FBS транзакций для staged_processor
                 "fbo_count": 0,  # ИСПРАВЛЕНИЕ: FBO не используем
-                "fbs_count": len(fbs_data) if fbs_data else 0
+                "fbs_count": len(fbs_data) if fbs_data else 0,
             }
 
         except Exception as e:
             logger.error(f"Ошибка получения детальных продаж Ozon: {e}")
             return {"revenue": 0, "units": 0, "cogs": 0, "commission": 0, "profit": 0}
 
-    async def _parse_ozon_sales_file(self, file_path: str) -> List[Dict[str, Any]]:
+    async def _parse_ozon_sales_file(self, file_path: str) -> list[dict[str, Any]]:
         """Парсинг файла продаж Ozon"""
         try:
-            if file_path.endswith('.json'):
-                with open(file_path, 'r', encoding='utf-8') as f:
+            if file_path.endswith(".json"):
+                with open(file_path, encoding="utf-8") as f:
                     data = json.load(f)
                     if isinstance(data, list):
                         return data
                     return []
-            elif file_path.endswith('.xlsx'):
+            elif file_path.endswith(".xlsx"):
                 import pandas as pd
+
                 df = pd.read_excel(file_path)
-                return df.to_dict('records')
+                return df.to_dict("records")
             else:
                 logger.warning(f"Неподдерживаемый формат файла: {file_path}")
                 return []
@@ -613,30 +678,31 @@ class RealDataFinancialReports:
             logger.error(f"Ошибка парсинга файла продаж Ozon {file_path}: {e}")
             return []
 
-    async def get_real_expenses(self, revenue_data: Dict[str, Any], units_sold: Dict[str, int], orders_count: Dict[str, int]) -> Dict[str, Any]:
+    async def get_real_expenses(
+        self, revenue_data: dict[str, Any], units_sold: dict[str, int], orders_count: dict[str, int]
+    ) -> dict[str, Any]:
         """Получение РЕАЛЬНЫХ расходов через ExpenseManager"""
         try:
             # Используем реальную систему управления расходами
             from expenses import ExpenseManager
+
             expense_manager = ExpenseManager()
 
             # Рассчитываем расходы на основе реальных данных о продажах
             expenses_result = expense_manager.calculate_expenses(
-                revenue_data=revenue_data,
-                units_sold=units_sold,
-                orders_count=orders_count
+                revenue_data=revenue_data, units_sold=units_sold, orders_count=orders_count
             )
 
-            total_opex = expenses_result.get('total_expenses', 0)
-            expenses_count = len(expenses_result.get('detailed', []))
+            total_opex = expenses_result.get("total_expenses", 0)
+            expenses_count = len(expenses_result.get("detailed", []))
 
             logger.info(f"Реальные расходы за период: {total_opex}")
 
             return {
                 "opex": total_opex,
                 "expenses_count": expenses_count,
-                "expenses_detail": expenses_result.get('detailed', []),
-                "expenses_breakdown": expenses_result
+                "expenses_detail": expenses_result.get("detailed", []),
+                "expenses_breakdown": expenses_result,
             }
 
         except Exception as e:
@@ -653,30 +719,30 @@ class RealDataFinancialReports:
             ozon_stocks = await self._get_ozon_stocks()
 
             # Формируем сводку
-            total_wb_units = sum(item.get('quantity', 0) for item in wb_stocks)
-            total_ozon_units = sum(item.get('stock', 0) for item in ozon_stocks)
+            total_wb_units = sum(item.get("quantity", 0) for item in wb_stocks)
+            total_ozon_units = sum(item.get("stock", 0) for item in ozon_stocks)
 
             # Группируем товары правильно - по баркоду для WB, по базовому артикулу для Ozon
             wb_grouped = {}
             wb_warehouses = set()  # Реальные склады WB
             for item in wb_stocks:
-                barcode = item.get('barcode', '')
-                warehouse = item.get('warehouseName', '')  # Название склада
+                barcode = item.get("barcode", "")
+                warehouse = item.get("warehouseName", "")  # Название склада
                 if barcode:
                     if barcode not in wb_grouped:
                         wb_grouped[barcode] = 0
-                    wb_grouped[barcode] += item.get('quantity', 0)
+                    wb_grouped[barcode] += item.get("quantity", 0)
                 if warehouse:
                     wb_warehouses.add(warehouse)
 
             ozon_grouped = {}
             for item in ozon_stocks:
                 # Группируем по product_id (аналог баркода WB)
-                product_id = item.get('product_id')
+                product_id = item.get("product_id")
                 if product_id:
                     if product_id not in ozon_grouped:
                         ozon_grouped[product_id] = 0
-                    ozon_grouped[product_id] += item.get('stock', 0)
+                    ozon_grouped[product_id] += item.get("stock", 0)
 
             # Уникальные товары (правильно сгруппированные)
             wb_unique_products = len(wb_grouped)
@@ -700,11 +766,12 @@ class RealDataFinancialReports:
             logger.error(f"Ошибка получения остатков: {e}")
             return "• Данные об остатках временно недоступны"
 
-    async def _get_wb_stocks(self) -> List[Dict[str, Any]]:
+    async def _get_wb_stocks(self) -> list[dict[str, Any]]:
         """Получение остатков WB из файла отчета"""
         try:
             # Ищем файл остатков WB
             import glob
+
             pattern = "reports/wb_stock_*.json"
             files = glob.glob(pattern)
 
@@ -715,7 +782,7 @@ class RealDataFinancialReports:
             # Берем самый новый файл
             latest_file = max(files)
 
-            with open(latest_file, 'r', encoding='utf-8') as f:
+            with open(latest_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             logger.info(f"Загружено {len(data)} записей остатков WB из {latest_file}")
@@ -725,11 +792,12 @@ class RealDataFinancialReports:
             logger.error(f"Ошибка получения остатков WB: {e}")
             return []
 
-    async def _get_ozon_stocks(self) -> List[Dict[str, Any]]:
+    async def _get_ozon_stocks(self) -> list[dict[str, Any]]:
         """Получение остатков Ozon через API"""
         try:
             # Пока нет метода get_product_stocks - используем файлы отчетов
             import glob
+
             pattern = "reports/ozon_stocks_*.json"
             files = glob.glob(pattern)
 
@@ -740,7 +808,7 @@ class RealDataFinancialReports:
             # Берем самый новый файл
             latest_file = max(files)
 
-            with open(latest_file, 'r', encoding='utf-8') as f:
+            with open(latest_file, encoding="utf-8") as f:
                 data = json.load(f)
 
             logger.info(f"Загружено {len(data)} записей остатков Ozon из {latest_file}")
@@ -750,7 +818,9 @@ class RealDataFinancialReports:
             logger.error(f"Ошибка получения остатков Ozon: {e}")
             return []
 
-    async def calculate_real_pnl(self, date_from: str, date_to: str, progress_message=None, platform_filter: str = "both") -> Dict[str, Any]:
+    async def calculate_real_pnl(
+        self, date_from: str, date_to: str, progress_message=None, platform_filter: str = "both"
+    ) -> dict[str, Any]:
         """Расчет РЕАЛЬНОЙ прибыли и убытков на основе API данных с фильтром платформ
 
         Args:
@@ -758,6 +828,7 @@ class RealDataFinancialReports:
             date_to: Конечная дата
             progress_message: Сообщение для обновления прогресса
             platform_filter: "wb", "ozon", или "both" (по умолчанию)
+
         """
         from datetime import datetime
 
@@ -772,39 +843,51 @@ class RealDataFinancialReports:
             # Для больших периодов используем специальную систему
             logger.info(f"БОЛЬШОЙ ПЕРИОД ({period_days} дней) - используем LongPeriodProcessor")
             from long_period_processor import long_processor
-            return await long_processor.process_year_with_progress(date_from, date_to, progress_message, platform_filter)
+
+            return await long_processor.process_year_with_progress(
+                date_from, date_to, progress_message, platform_filter
+            )
 
         # НОВАЯ ЛОГИКА: Используем параллельную обработку для оптимизации
         from parallel_processor import get_parallel_processor
+
         parallel_processor = get_parallel_processor(self)
 
         # Выбираем оптимальную стратегию обработки
         if period_days <= 7:
             # Для коротких периодов - стандартная параллелизация
-            parallel_data = await parallel_processor.get_parallel_financial_data(date_from, date_to, platform_filter)
+            parallel_data = await parallel_processor.get_parallel_financial_data(
+                date_from, date_to, platform_filter
+            )
         else:
             # Для средних и длинных периодов - оптимизированная chunked обработка
-            parallel_data = await parallel_processor.get_optimized_chunked_data(date_from, date_to, platform_filter)
+            parallel_data = await parallel_processor.get_optimized_chunked_data(
+                date_from, date_to, platform_filter
+            )
 
         # Извлекаем данные из результата параллельной обработки
-        wb_data = parallel_data['wb']
-        ozon_data = parallel_data['ozon']
-        expenses_data = parallel_data['expenses']
+        wb_data = parallel_data["wb"]
+        ozon_data = parallel_data["ozon"]
+        expenses_data = parallel_data["expenses"]
 
         # Добавляем информацию о времени обработки
-        processing_time = parallel_data.get('processing_time', 0)
-        was_parallelized = parallel_data.get('parallelized', False)
-        was_chunked = parallel_data.get('chunked', False)
+        processing_time = parallel_data.get("processing_time", 0)
+        was_parallelized = parallel_data.get("parallelized", False)
+        was_chunked = parallel_data.get("chunked", False)
 
-        logger.info(f"🚀 Обработка завершена за {processing_time:.1f}с "
-                   f"(параллельно: {was_parallelized}, chunked: {was_chunked})")
+        logger.info(
+            f"🚀 Обработка завершена за {processing_time:.1f}с "
+            f"(параллельно: {was_parallelized}, chunked: {was_chunked})"
+        )
 
         # МАТЕМАТИЧЕСКИЕ РАСЧЕТЫ НА РЕАЛЬНЫХ ДАННЫХ
         total_revenue = wb_data["revenue"] + ozon_data["revenue"]
         total_units = wb_data["units"] + ozon_data["units"]
         total_cogs = wb_data["cogs"] + ozon_data["cogs"]
         total_commission = wb_data["commission"] + ozon_data["commission"]
-        total_advertising = wb_data.get("advertising_costs", 0) + ozon_data.get("advertising_costs", 0)
+        total_advertising = wb_data.get("advertising_costs", 0) + ozon_data.get(
+            "advertising_costs", 0
+        )
 
         # Используем расходы из параллельной обработки
         total_opex = expenses_data["opex"]
@@ -849,7 +932,7 @@ class RealDataFinancialReports:
                 "opex": total_opex,
                 "gross_profit": gross_profit,
                 "net_profit": net_profit,
-                "margin_percent": margin_percent
+                "margin_percent": margin_percent,
             },
             "expenses": expenses_data,
             "stocks_summary": stocks_info,
@@ -857,14 +940,14 @@ class RealDataFinancialReports:
             "data_sources": {
                 "wb_sales_records": len(wb_data.get("sales_data", [])),
                 "ozon_sales_records": ozon_data.get("transaction_count", 0),
-                "expenses_records": expenses_data["expenses_count"]
+                "expenses_records": expenses_data["expenses_count"],
             },
             "performance": {
                 "processing_time": processing_time,
                 "parallelized": was_parallelized,
                 "chunked": was_chunked,
-                "period_days": period_days
-            }
+                "period_days": period_days,
+            },
         }
 
         # Сохраняем детальные данные в базу данных для истории
@@ -872,63 +955,70 @@ class RealDataFinancialReports:
 
         # Запись по WB с детальным разбором
         if wb_data["revenue"] > 0:
-            pnl_records.append({
-                'platform': 'WB',
-                'sku': None,
-                'revenue': wb_data["revenue"],
-                'units_sold': wb_data["units"],
-                'cogs': wb_data["cogs"],
-                'profit': wb_data["profit"],
-                'ad_costs': 0,  # WB пока не предоставляет данные о рекламе отдельно
-                'commission': wb_data["commission"],
-                'orders_revenue': wb_data.get("orders_revenue", 0),
-                'orders_units': wb_data.get("orders_units", 0),
-                'logistics_costs': wb_data.get("logistics_costs", 0),
-                'returns_cost': wb_data.get("returns_count", 0) * 100,  # Оценочная стоимость возвратов
-                'other_costs': 0,
-                'transaction_count': len(wb_data.get("sales_data", [])),
-                'operation_breakdown': wb_data.get("operation_breakdown", {})
-            })
+            pnl_records.append(
+                {
+                    "platform": "WB",
+                    "sku": None,
+                    "revenue": wb_data["revenue"],
+                    "units_sold": wb_data["units"],
+                    "cogs": wb_data["cogs"],
+                    "profit": wb_data["profit"],
+                    "ad_costs": 0,  # WB пока не предоставляет данные о рекламе отдельно
+                    "commission": wb_data["commission"],
+                    "orders_revenue": wb_data.get("orders_revenue", 0),
+                    "orders_units": wb_data.get("orders_units", 0),
+                    "logistics_costs": wb_data.get("logistics_costs", 0),
+                    "returns_cost": wb_data.get("returns_count", 0)
+                    * 100,  # Оценочная стоимость возвратов
+                    "other_costs": 0,
+                    "transaction_count": len(wb_data.get("sales_data", [])),
+                    "operation_breakdown": wb_data.get("operation_breakdown", {}),
+                }
+            )
 
         # Запись по Ozon с детальным разбором
         if ozon_data["revenue"] > 0:
-            pnl_records.append({
-                'platform': 'OZON',
-                'sku': None,
-                'revenue': ozon_data["revenue"],
-                'units_sold': ozon_data["units"],
-                'cogs': ozon_data["cogs"],
-                'profit': ozon_data["profit"],
-                'ad_costs': ozon_data.get("advertising_costs", 0),
-                'commission': ozon_data["commission"],
-                'orders_revenue': ozon_data.get("orders_revenue", 0),
-                'orders_units': ozon_data.get("orders_units", 0),
-                'promo_costs': ozon_data.get("promo_costs", 0),
-                'returns_cost': ozon_data.get("returns_cost", 0),
-                'logistics_costs': ozon_data.get("logistics_costs", 0),
-                'other_costs': ozon_data.get("other_costs", 0),
-                'transaction_count': ozon_data.get("transaction_count", 0),
-                'operation_breakdown': ozon_data.get("operation_breakdown", {})
-            })
+            pnl_records.append(
+                {
+                    "platform": "OZON",
+                    "sku": None,
+                    "revenue": ozon_data["revenue"],
+                    "units_sold": ozon_data["units"],
+                    "cogs": ozon_data["cogs"],
+                    "profit": ozon_data["profit"],
+                    "ad_costs": ozon_data.get("advertising_costs", 0),
+                    "commission": ozon_data["commission"],
+                    "orders_revenue": ozon_data.get("orders_revenue", 0),
+                    "orders_units": ozon_data.get("orders_units", 0),
+                    "promo_costs": ozon_data.get("promo_costs", 0),
+                    "returns_cost": ozon_data.get("returns_cost", 0),
+                    "logistics_costs": ozon_data.get("logistics_costs", 0),
+                    "other_costs": ozon_data.get("other_costs", 0),
+                    "transaction_count": ozon_data.get("transaction_count", 0),
+                    "operation_breakdown": ozon_data.get("operation_breakdown", {}),
+                }
+            )
 
         # Общий итог
-        pnl_records.append({
-            'platform': 'TOTAL',
-            'sku': None,
-            'revenue': total_revenue,
-            'units_sold': total_units,
-            'cogs': total_cogs,
-            'profit': net_profit,
-            'ad_costs': ozon_data.get("advertising_costs", 0),
-            'commission': total_commission,
-            'orders_revenue': ozon_data.get("orders_revenue", 0),
-            'orders_units': ozon_data.get("orders_units", 0),
-            'promo_costs': ozon_data.get("promo_costs", 0),
-            'returns_cost': ozon_data.get("returns_cost", 0),
-            'logistics_costs': ozon_data.get("logistics_costs", 0),
-            'other_costs': ozon_data.get("other_costs", 0),
-            'transaction_count': ozon_data.get("transaction_count", 0)
-        })
+        pnl_records.append(
+            {
+                "platform": "TOTAL",
+                "sku": None,
+                "revenue": total_revenue,
+                "units_sold": total_units,
+                "cogs": total_cogs,
+                "profit": net_profit,
+                "ad_costs": ozon_data.get("advertising_costs", 0),
+                "commission": total_commission,
+                "orders_revenue": ozon_data.get("orders_revenue", 0),
+                "orders_units": ozon_data.get("orders_units", 0),
+                "promo_costs": ozon_data.get("promo_costs", 0),
+                "returns_cost": ozon_data.get("returns_cost", 0),
+                "logistics_costs": ozon_data.get("logistics_costs", 0),
+                "other_costs": ozon_data.get("other_costs", 0),
+                "transaction_count": ozon_data.get("transaction_count", 0),
+            }
+        )
 
         # Сохраняем с указанием периода
         try:
@@ -941,9 +1031,8 @@ class RealDataFinancialReports:
 
         return pnl_result
 
-    def format_real_pnl_report(self, pnl_data: Dict[str, Any]) -> str:
+    def format_real_pnl_report(self, pnl_data: dict[str, Any]) -> str:
         """Форматирование РЕАЛЬНОГО P&L отчета"""
-
         total = pnl_data["total"]
         wb = pnl_data["wb"]
         ozon = pnl_data["ozon"]
@@ -965,19 +1054,19 @@ class RealDataFinancialReports:
 Продано единиц: {total['units']:,}"""
 
         # Детализация по платформам
-        if wb['revenue'] > 0 or ozon['revenue'] > 0:
+        if wb["revenue"] > 0 or ozon["revenue"] > 0:
             report += "\n\n📈 <b>ПО ПЛАТФОРМАМ</b>"
 
-            if wb['revenue'] > 0:
+            if wb["revenue"] > 0:
                 # Детальный разбор WB аналогично Ozon
-                orders_revenue = wb.get('orders_revenue', 0)
-                logistics_costs = wb.get('logistics_costs', 0)
-                returns_count = wb.get('returns_count', 0)
+                orders_revenue = wb.get("orders_revenue", 0)
+                logistics_costs = wb.get("logistics_costs", 0)
+                returns_count = wb.get("returns_count", 0)
 
                 # Получаем детальную структуру WB согласно отчету поставщика
-                wb_commission_and_acquiring = wb.get('commission', 0)
-                wb_logistics_and_storage = wb.get('additional_fees', 0)  # Логистика + хранение
-                wb_advertising_costs = wb.get('advertising_costs', 0)  # Реклама WB
+                wb_commission_and_acquiring = wb.get("commission", 0)
+                wb_logistics_and_storage = wb.get("additional_fees", 0)  # Логистика + хранение
+                wb_advertising_costs = wb.get("advertising_costs", 0)  # Реклама WB
                 total_wb_deductions = wb_commission_and_acquiring + wb_logistics_and_storage
 
                 report += f"""
@@ -990,10 +1079,10 @@ class RealDataFinancialReports:
 • Общие удержания WB: {total_wb_deductions:,.0f} ₽ ({(total_wb_deductions/wb['revenue']*100):.1f}%)"""
 
                 # Добавляем информацию о рекламных кампаниях
-                campaigns_info = wb.get('campaigns_info', {})
+                campaigns_info = wb.get("campaigns_info", {})
                 if campaigns_info:
-                    total_campaigns = campaigns_info.get('total_campaigns', 0)
-                    active_campaigns = campaigns_info.get('active_campaigns', 0)
+                    total_campaigns = campaigns_info.get("total_campaigns", 0)
+                    active_campaigns = campaigns_info.get("active_campaigns", 0)
                     report += f"""
 📊 Рекламные кампании: {total_campaigns} всего, {active_campaigns} активных"""
 
@@ -1005,17 +1094,17 @@ class RealDataFinancialReports:
 • <b>Чистая прибыль: {wb['profit']:,.0f} ₽</b>"""
 
                 if orders_revenue > 0:
-                    buyout_rate = (wb['revenue'] / orders_revenue) * 100
+                    buyout_rate = (wb["revenue"] / orders_revenue) * 100
                     report += f"""
 • Процент выкупа: {buyout_rate:.1f}%"""
 
-            if ozon['revenue'] > 0:
+            if ozon["revenue"] > 0:
                 # Детальный разбор Ozon с Transaction API данными
-                orders_revenue = ozon.get('orders_revenue', 0)
-                advertising_costs = ozon.get('advertising_costs', 0)
-                promo_costs = ozon.get('promo_costs', 0)
-                returns_cost = ozon.get('returns_cost', 0)
-                logistics_costs = ozon.get('logistics_costs', 0)
+                orders_revenue = ozon.get("orders_revenue", 0)
+                advertising_costs = ozon.get("advertising_costs", 0)
+                promo_costs = ozon.get("promo_costs", 0)
+                returns_cost = ozon.get("returns_cost", 0)
+                logistics_costs = ozon.get("logistics_costs", 0)
 
                 report += f"""
 🔵 <b>Ozon (детальный разбор):</b>
@@ -1029,7 +1118,7 @@ class RealDataFinancialReports:
 • <b>Чистая прибыль: {ozon['profit']:,.0f} ₽</b>"""
 
                 if orders_revenue > 0:
-                    buyout_rate = (ozon['revenue'] / orders_revenue) * 100
+                    buyout_rate = (ozon["revenue"] / orders_revenue) * 100
                     report += f"""
 • Процент выкупа: {buyout_rate:.1f}%"""
 
@@ -1061,7 +1150,9 @@ class RealDataFinancialReports:
             if was_chunked:
                 optimization_info.append("chunked API")
 
-            optimization_text = " + ".join(optimization_info) if optimization_info else "последовательная обработка"
+            optimization_text = (
+                " + ".join(optimization_info) if optimization_info else "последовательная обработка"
+            )
 
             report += f"""
 
@@ -1078,17 +1169,20 @@ class RealDataFinancialReports:
                 report += f"\n• {error}"
 
         # Если нет данных
-        if total['revenue'] == 0:
+        if total["revenue"] == 0:
             report += "\n\n📝 <b>СТАТУС:</b> Нет продаж за период"
 
         return report
 
+
 # Глобальный экземпляр для использования в боте
 real_reports = RealDataFinancialReports()
 
-async def generate_real_financial_report(date_from: str = None, date_to: str = None, progress_message = None) -> str:
-    """Генерация РЕАЛЬНОГО финансового отчета"""
 
+async def generate_real_financial_report(
+    date_from: str = None, date_to: str = None, progress_message=None
+) -> str:
+    """Генерация РЕАЛЬНОГО финансового отчета"""
     if not date_from:
         date_from = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
     if not date_to:
@@ -1107,7 +1201,7 @@ async def generate_real_financial_report(date_from: str = None, date_to: str = N
         logger.error(f"Ошибка генерации реального отчета: {e}")
         return f"""❌ <b>ОШИБКА ГЕНЕРАЦИИ РЕАЛЬНОГО ОТЧЕТА</b>
 
-🚫 Ошибка: {str(e)}
+🚫 Ошибка: {e!s}
 
 📝 <b>Возможные причины:</b>
 • API недоступны
@@ -1120,15 +1214,16 @@ async def generate_real_financial_report(date_from: str = None, date_to: str = N
 async def generate_cumulative_financial_report(days: int = 30) -> str:
     """Генерация нарастающего итога P&L за указанное количество дней из БД"""
     try:
-        from db import get_cumulative_pnl
         from datetime import datetime
+
+        from db import get_cumulative_pnl
 
         logger.info(f"Генерация нарастающего итога за {days} дней...")
 
         # Получаем нарастающий итог из БД
         cumulative_data = get_cumulative_pnl(days)
 
-        if not cumulative_data.get('platforms'):
+        if not cumulative_data.get("platforms"):
             return f"""📊 <b>НАРАСТАЮЩИЙ ИТОГ P&L</b>
 <i>За последние {days} дней</i>
 
@@ -1140,8 +1235,8 @@ async def generate_cumulative_financial_report(days: int = 30) -> str:
 • Убедитесь что данные сохраняются в БД"""
 
         # Форматируем отчет
-        total = cumulative_data['total']
-        platforms = cumulative_data['platforms']
+        total = cumulative_data["total"]
+        platforms = cumulative_data["platforms"]
 
         report = f"""📊 <b>НАРАСТАЮЩИЙ ИТОГ P&L</b>
 <i>За последние {days} дней</i>
@@ -1162,11 +1257,11 @@ async def generate_cumulative_financial_report(days: int = 30) -> str:
         if platforms:
             report += "\n\n📈 <b>ПО ПЛАТФОРМАМ</b>"
 
-            if 'WB' in platforms:
-                wb = platforms['WB']
+            if "WB" in platforms:
+                wb = platforms["WB"]
                 # Структурируем данные WB согласно отчету поставщика
-                wb_commission_acquiring = wb['total_commission']
-                wb_logistics_storage = wb.get('total_logistics_costs', 0)
+                wb_commission_acquiring = wb["total_commission"]
+                wb_logistics_storage = wb.get("total_logistics_costs", 0)
                 wb_total_deductions = wb_commission_acquiring + wb_logistics_storage
 
                 report += f"""
@@ -1180,13 +1275,13 @@ async def generate_cumulative_financial_report(days: int = 30) -> str:
 • Возвраты: {wb.get('total_returns_cost', 0):,.0f} ₽
 • <b>Чистая прибыль: {wb['total_profit']:,.0f} ₽</b>"""
 
-                if wb.get('total_orders_revenue', 0) > 0:
-                    wb_buyout_rate = (wb['total_revenue'] / wb['total_orders_revenue']) * 100
+                if wb.get("total_orders_revenue", 0) > 0:
+                    wb_buyout_rate = (wb["total_revenue"] / wb["total_orders_revenue"]) * 100
                     report += f"""
 • Процент выкупа: {wb_buyout_rate:.1f}%"""
 
-            if 'OZON' in platforms:
-                ozon = platforms['OZON']
+            if "OZON" in platforms:
+                ozon = platforms["OZON"]
                 report += f"""
 
 🔵 <b>Ozon (детальный разбор):</b>
@@ -1199,7 +1294,7 @@ async def generate_cumulative_financial_report(days: int = 30) -> str:
 • Логистика: {ozon['total_logistics_costs']:,.0f} ₽
 • <b>Чистая прибыль: {ozon['total_profit']:,.0f} ₽</b>"""
 
-                if ozon.get('buyout_rate', 0) > 0:
+                if ozon.get("buyout_rate", 0) > 0:
                     report += f"""
 • Процент выкупа: {ozon['buyout_rate']:.1f}%"""
 
@@ -1216,7 +1311,7 @@ async def generate_cumulative_financial_report(days: int = 30) -> str:
 
     except Exception as e:
         logger.error(f"Ошибка генерации нарастающего итога: {e}")
-        return f"❌ Ошибка генерации нарастающего итога: {str(e)}"
+        return f"❌ Ошибка генерации нарастающего итога: {e!s}"
 
 
 if __name__ == "__main__":

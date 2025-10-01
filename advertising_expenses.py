@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""
-Система управления рекламными расходами
+"""Система управления рекламными расходами
 Позволяет вручную задавать и обновлять расходы на рекламу WB и Ozon
 """
 
 import logging
-from datetime import datetime
-from typing import Dict, Optional
-from expenses import ExpenseManager, ExpenseType, CalculationType
+
+from expenses import CalculationType, ExpenseManager, ExpenseType
 
 logger = logging.getLogger(__name__)
+
 
 class AdvertisingExpenseManager:
     """Менеджер рекламных расходов с ручным вводом"""
@@ -29,11 +28,11 @@ class AdvertisingExpenseManager:
         ozon_found = False
 
         for expense in existing_expenses:
-            if expense.platform == 'wb' and 'ручной ввод' in expense.name.lower():
+            if expense.platform == "wb" and "ручной ввод" in expense.name.lower():
                 self.wb_ads_expense_id = expense.id
                 wb_found = True
                 logger.info(f"Найден существующий WB рекламный расход: {expense.id}")
-            elif expense.platform == 'ozon' and 'ручной ввод' in expense.name.lower():
+            elif expense.platform == "ozon" and "ручной ввод" in expense.name.lower():
                 self.ozon_ads_expense_id = expense.id
                 ozon_found = True
                 logger.info(f"Найден существующий Ozon рекламный расход: {expense.id}")
@@ -41,49 +40,51 @@ class AdvertisingExpenseManager:
         # Создаем недостающие расходы
         if not wb_found:
             self.wb_ads_expense_id = self.expense_manager.add_expense(
-                name='Реклама WB (ручной ввод)',
+                name="Реклама WB (ручной ввод)",
                 expense_type=ExpenseType.ADVERTISING,
                 calculation_type=CalculationType.FIXED_AMOUNT,
                 amount=0.0,
-                platform='wb',
-                category='advertising',
-                description='Ручной ввод рекламных расходов WB'
+                platform="wb",
+                category="advertising",
+                description="Ручной ввод рекламных расходов WB",
             )
             logger.info(f"Создан WB рекламный расход: {self.wb_ads_expense_id}")
 
         if not ozon_found:
             self.ozon_ads_expense_id = self.expense_manager.add_expense(
-                name='Реклама Ozon (ручной ввод)',
+                name="Реклама Ozon (ручной ввод)",
                 expense_type=ExpenseType.ADVERTISING,
                 calculation_type=CalculationType.FIXED_AMOUNT,
                 amount=0.0,
-                platform='ozon',
-                category='advertising',
-                description='Ручной ввод рекламных расходов Ozon'
+                platform="ozon",
+                category="advertising",
+                description="Ручной ввод рекламных расходов Ozon",
             )
             logger.info(f"Создан Ozon рекламный расход: {self.ozon_ads_expense_id}")
 
     def set_wb_advertising_expense(self, amount: float, period_description: str = "") -> bool:
-        """
-        Установка рекламных расходов WB
+        """Установка рекламных расходов WB
 
         Args:
             amount: Сумма расходов в рублях
             period_description: Описание периода (например, "январь 2025")
+
         """
         try:
-            description = f"Реклама WB за {period_description}" if period_description else "Реклама WB (ручной ввод)"
+            description = (
+                f"Реклама WB за {period_description}"
+                if period_description
+                else "Реклама WB (ручной ввод)"
+            )
 
             success = self.expense_manager.update_expense(
-                self.wb_ads_expense_id,
-                amount=amount,
-                description=description
+                self.wb_ads_expense_id, amount=amount, description=description
             )
 
             if success:
                 logger.info(f"✅ WB реклама обновлена: {amount:,.2f} ₽ ({period_description})")
             else:
-                logger.error(f"❌ Ошибка обновления WB рекламы")
+                logger.error("❌ Ошибка обновления WB рекламы")
 
             return success
         except Exception as e:
@@ -91,42 +92,44 @@ class AdvertisingExpenseManager:
             return False
 
     def set_ozon_advertising_expense(self, amount: float, period_description: str = "") -> bool:
-        """
-        Установка рекламных расходов Ozon
+        """Установка рекламных расходов Ozon
 
         Args:
             amount: Сумма расходов в рублях
             period_description: Описание периода
+
         """
         try:
-            description = f"Реклама Ozon за {period_description}" if period_description else "Реклама Ozon (ручной ввод)"
+            description = (
+                f"Реклама Ozon за {period_description}"
+                if period_description
+                else "Реклама Ozon (ручной ввод)"
+            )
 
             success = self.expense_manager.update_expense(
-                self.ozon_ads_expense_id,
-                amount=amount,
-                description=description
+                self.ozon_ads_expense_id, amount=amount, description=description
             )
 
             if success:
                 logger.info(f"✅ Ozon реклама обновлена: {amount:,.2f} ₽ ({period_description})")
             else:
-                logger.error(f"❌ Ошибка обновления Ozon рекламы")
+                logger.error("❌ Ошибка обновления Ozon рекламы")
 
             return success
         except Exception as e:
             logger.error(f"Ошибка установки Ozon рекламных расходов: {e}")
             return False
 
-    def get_advertising_expenses(self) -> Dict[str, float]:
+    def get_advertising_expenses(self) -> dict[str, float]:
         """Получение текущих рекламных расходов"""
         wb_expense = self.expense_manager.get_expense(self.wb_ads_expense_id)
         ozon_expense = self.expense_manager.get_expense(self.ozon_ads_expense_id)
 
         return {
-            'wb_advertising': wb_expense.amount if wb_expense else 0.0,
-            'ozon_advertising': ozon_expense.amount if ozon_expense else 0.0,
-            'total_advertising': (wb_expense.amount if wb_expense else 0.0) +
-                               (ozon_expense.amount if ozon_expense else 0.0)
+            "wb_advertising": wb_expense.amount if wb_expense else 0.0,
+            "ozon_advertising": ozon_expense.amount if ozon_expense else 0.0,
+            "total_advertising": (wb_expense.amount if wb_expense else 0.0)
+            + (ozon_expense.amount if ozon_expense else 0.0),
         }
 
     def reset_advertising_expenses(self) -> bool:
@@ -149,21 +152,26 @@ class AdvertisingExpenseManager:
 • Ozon реклама: {expenses['ozon_advertising']:,.0f} ₽
 • <b>Итого реклама: {expenses['total_advertising']:,.0f} ₽</b>"""
 
+
 # Глобальный экземпляр
 advertising_manager = AdvertisingExpenseManager()
+
 
 # Удобные функции для использования в боте
 def set_wb_ads_expense(amount: float, period: str = "") -> bool:
     """Установить расходы на рекламу WB"""
     return advertising_manager.set_wb_advertising_expense(amount, period)
 
+
 def set_ozon_ads_expense(amount: float, period: str = "") -> bool:
     """Установить расходы на рекламу Ozon"""
     return advertising_manager.set_ozon_advertising_expense(amount, period)
 
-def get_ads_expenses() -> Dict[str, float]:
+
+def get_ads_expenses() -> dict[str, float]:
     """Получить все рекламные расходы"""
     return advertising_manager.get_advertising_expenses()
+
 
 def reset_ads_expenses() -> bool:
     """Сбросить все рекламные расходы"""

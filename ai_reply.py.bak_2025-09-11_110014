@@ -18,12 +18,12 @@ openai.api_key = Config.OPENAI_API_KEY
 
 def get_system_prompt(review_data: Dict[str, Any]) -> str:
     """Генерация системного промпта в зависимости от данных отзыва"""
-    
+
     rating = review_data.get('rating', 3)
     has_media = review_data.get('has_media', False)
     platform = review_data.get('platform', 'WB')
-    
-    base_prompt = """Ты - менеджер по работе с клиентами бренда SoVAni, дружелюбный и профессиональный помощник. 
+
+    base_prompt = """Ты - менеджер по работе с клиентами бренда SoVAni, дружелюбный и профессиональный помощник.
 
 Бренд SoVAni:
 - Молодой и современный бренд
@@ -33,7 +33,7 @@ def get_system_prompt(review_data: Dict[str, Any]) -> str:
 - Всегда готов помочь и решить проблемы
 
 Твоя задача - написать ответ на отзыв покупателя."""
-    
+
     # Настройки в зависимости от рейтинга
     if rating >= 5:
         tone_instruction = """
@@ -76,35 +76,35 @@ def get_system_prompt(review_data: Dict[str, Any]) -> str:
 - Подчеркни важность каждого клиента для SoVAni
 - Предложи личный контакт для решения
 """
-    
+
     media_instruction = ""
     if has_media:
         media_instruction = "\n- Обязательно поблагодари за фото/видео (они помогают другим покупателям)"
-    
+
     length_instruction = "\n\nОтвет должен быть коротким (максимум 2-3 предложения), естественным и искренним."
-    
+
     return base_prompt + tone_instruction + media_instruction + length_instruction
 
 
 async def generate_review_reply(review: Dict[str, Any]) -> str:
     """Генерация ответа на отзыв"""
-    
+
     # Сначала попробуем найти готовый шаблон для отзывов без текста
     review_text = review.get('text', '').strip()
     rating = review.get('rating', 0)
     has_media = review.get('has_media', False)
-    
+
     if not review_text:
         # Отзыв без текста - используем шаблон
         template = get_template(rating, False, has_media)
         if template:
             logger.info(f"Использован шаблон для отзыва без текста ({rating} звезд)")
             return template
-    
+
     # Отзыв с текстом - генерируем через ChatGPT
     try:
         system_prompt = get_system_prompt(review)
-        
+
         user_message = f"""
 Отзыв покупателя:
 Рейтинг: {rating} звезд
@@ -114,7 +114,7 @@ async def generate_review_reply(review: Dict[str, Any]) -> str:
 
 Напиши подходящий ответ от лица бренда SoVAni.
 """
-        
+
         response = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: openai.ChatCompletion.create(
@@ -128,19 +128,19 @@ async def generate_review_reply(review: Dict[str, Any]) -> str:
                 timeout=30
             )
         )
-        
+
         generated_answer = response.choices[0].message.content.strip()
         logger.info(f"Сгенерирован ответ на отзыв через ChatGPT")
         return generated_answer
-        
+
     except openai.error.RateLimitError:
         logger.warning("OpenAI: превышен лимит запросов")
         return get_fallback_review_response(rating, has_media)
-    
+
     except openai.error.InvalidRequestError as e:
         logger.error(f"OpenAI: некорректный запрос - {e}")
         return get_fallback_review_response(rating, has_media)
-    
+
     except Exception as e:
         logger.error(f"Ошибка генерации ответа на отзыв: {e}")
         return get_fallback_review_response(rating, has_media)
@@ -148,13 +148,13 @@ async def generate_review_reply(review: Dict[str, Any]) -> str:
 
 async def generate_question_reply(question: Dict[str, Any]) -> str:
     """Генерация ответа на вопрос покупателя"""
-    
+
     try:
         system_prompt = """Ты - менеджер по работе с клиентами бренда SoVAni.
 
 Бренд SoVAni:
 - Молодой и современный бренд
-- Дружелюбный, открытый стиль общения  
+- Дружелюбный, открытый стиль общения
 - Профессиональный подход
 - Всегда готов помочь и дать полезную информацию
 
@@ -171,17 +171,17 @@ async def generate_question_reply(question: Dict[str, Any]) -> str:
 - Излишне длинных объяснений
 - Технического жаргона
 - Неуверенности в тоне"""
-        
+
         question_text = question.get('text', '')
         sku = question.get('sku', 'N/A')
-        
+
         user_message = f"""
 Вопрос покупателя о товаре {sku}:
 "{question_text}"
 
 Напиши полезный ответ от лица бренда SoVAni.
 """
-        
+
         response = await asyncio.get_event_loop().run_in_executor(
             None,
             lambda: openai.ChatCompletion.create(
@@ -195,15 +195,15 @@ async def generate_question_reply(question: Dict[str, Any]) -> str:
                 timeout=30
             )
         )
-        
+
         generated_answer = response.choices[0].message.content.strip()
         logger.info(f"Сгенерирован ответ на вопрос через ChatGPT")
         return generated_answer
-        
+
     except openai.error.RateLimitError:
         logger.warning("OpenAI: превышен лимит запросов")
         return get_fallback_question_response()
-    
+
     except Exception as e:
         logger.error(f"Ошибка генерации ответа на вопрос: {e}")
         return get_fallback_question_response()
@@ -211,9 +211,9 @@ async def generate_question_reply(question: Dict[str, Any]) -> str:
 
 def get_fallback_review_response(rating: int, has_media: bool = False) -> str:
     """Резервный ответ на отзыв при ошибке ChatGPT"""
-    
+
     media_part = " Спасибо за фото!" if has_media else ""
-    
+
     if rating >= 5:
         return f"Спасибо за отличную оценку!{media_part} Команда SoVAni очень рада, что товар понравился! ⭐"
     elif rating == 4:
@@ -243,11 +243,11 @@ async def test_openai_connection() -> bool:
                 timeout=15
             )
         )
-        
+
         if response and response.choices:
             logger.info("OpenAI API: соединение успешно")
             return True
-            
+
     except openai.error.AuthenticationError:
         logger.error("OpenAI API: неверный API ключ")
     except openai.error.RateLimitError:
@@ -255,7 +255,7 @@ async def test_openai_connection() -> bool:
         return True  # Подключение работает, но лимит
     except Exception as e:
         logger.error(f"OpenAI API: ошибка соединения - {e}")
-    
+
     return False
 
 
@@ -271,10 +271,10 @@ def clean_review_text(text: str) -> str:
     """Очистка текста отзыва от лишних символов"""
     if not text:
         return ""
-    
+
     # Убираем лишние пробелы и переносы строк
     cleaned = " ".join(text.strip().split())
-    
+
     # Ограничиваем длину
     return truncate_text(cleaned, 400)
 
@@ -287,13 +287,13 @@ async def get_cached_response(key: str, generator_func, *args, **kwargs) -> str:
     if key in _response_cache:
         logger.info(f"Использован кэшированный ответ: {key}")
         return _response_cache[key]
-    
+
     response = await generator_func(*args, **kwargs)
     _response_cache[key] = response
-    
+
     # Ограничиваем размер кэша
     if len(_response_cache) > 100:
         # Удаляем случайный элемент
         _response_cache.pop(next(iter(_response_cache)))
-    
+
     return response

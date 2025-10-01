@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-"""
-ИТОГОВЫЙ ОТЧЕТ: ВОЗМОЖНОСТИ ОБРАБОТКИ ГОДОВЫХ ДАННЫХ
+"""ИТОГОВЫЙ ОТЧЕТ: ВОЗМОЖНОСТИ ОБРАБОТКИ ГОДОВЫХ ДАННЫХ
 Сводный анализ после оптимизации задержек
 """
 
 import logging
-from datetime import datetime, timedelta
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 def generate_yearly_capabilities_report():
     """Генерация итогового отчета по возможностям"""
-
     logger.info("📊 ИТОГОВЫЙ ОТЧЕТ: ВОЗМОЖНОСТИ ОБРАБОТКИ ГОДОВЫХ ДАННЫХ")
     logger.info("=" * 70)
     logger.info("После оптимизации задержек для безопасной загрузки")
@@ -20,26 +18,15 @@ def generate_yearly_capabilities_report():
 
     # Параметры после оптимизации
     wb_config = {
-        'chunk_size': 45,
-        'apis_per_chunk': 2,  # Sales + Orders
-        'delays': {
-            'year': 8.0,
-            'half_year': 5.0,
-            'quarter': 3.5,
-            'month': 2.5,
-            'short': 2.0
-        }
+        "chunk_size": 45,
+        "apis_per_chunk": 2,  # Sales + Orders
+        "delays": {"year": 8.0, "half_year": 5.0, "quarter": 3.5, "month": 2.5, "short": 2.0},
     }
 
     ozon_config = {
-        'chunk_size': 60,
-        'apis_per_chunk': 1,  # Только FBS (включает все данные)
-        'delays': {
-            'year': 4.0,
-            'half_year': 3.0,
-            'quarter': 2.5,
-            'short': 2.0
-        }
+        "chunk_size": 60,
+        "apis_per_chunk": 1,  # Только FBS (включает все данные)
+        "delays": {"year": 4.0, "half_year": 3.0, "quarter": 2.5, "short": 2.0},
     }
 
     # Анализ различных периодов
@@ -49,7 +36,7 @@ def generate_yearly_capabilities_report():
         (180, "Полугодие", "half_year"),
         (90, "Квартал", "quarter"),
         (60, "2 месяца", "short"),
-        (30, "Месяц", "short")
+        (30, "Месяц", "short"),
     ]
 
     logger.info("🟣 WILDBERRIES API (после оптимизации):")
@@ -57,9 +44,9 @@ def generate_yearly_capabilities_report():
 
     wb_results = []
     for days, description, delay_type in periods:
-        chunks = (days + wb_config['chunk_size'] - 1) // wb_config['chunk_size']
-        requests = chunks * wb_config['apis_per_chunk']
-        delay = wb_config['delays'][delay_type]
+        chunks = (days + wb_config["chunk_size"] - 1) // wb_config["chunk_size"]
+        requests = chunks * wb_config["apis_per_chunk"]
+        delay = wb_config["delays"][delay_type]
         time_minutes = (requests * delay) / 60
 
         # Оценка надежности
@@ -72,15 +59,17 @@ def generate_yearly_capabilities_report():
         else:
             reliability = "ОСТОРОЖНО"
 
-        wb_results.append({
-            'days': days,
-            'description': description,
-            'chunks': chunks,
-            'requests': requests,
-            'delay': delay,
-            'time_minutes': time_minutes,
-            'reliability': reliability
-        })
+        wb_results.append(
+            {
+                "days": days,
+                "description": description,
+                "chunks": chunks,
+                "requests": requests,
+                "delay": delay,
+                "time_minutes": time_minutes,
+                "reliability": reliability,
+            }
+        )
 
         logger.info(f"📅 {description:12s} ({days:3d} дней):")
         logger.info(f"   Чанков: {chunks:2d} | Запросов: {requests:2d} | Задержка: {delay:.1f}s")
@@ -92,9 +81,9 @@ def generate_yearly_capabilities_report():
 
     ozon_results = []
     for days, description, delay_type in periods:
-        chunks = (days + ozon_config['chunk_size'] - 1) // ozon_config['chunk_size']
-        requests = chunks * ozon_config['apis_per_chunk']
-        delay = ozon_config['delays'][delay_type]
+        chunks = (days + ozon_config["chunk_size"] - 1) // ozon_config["chunk_size"]
+        requests = chunks * ozon_config["apis_per_chunk"]
+        delay = ozon_config["delays"][delay_type]
         time_minutes = (requests * delay) / 60
 
         # Оценка надежности
@@ -107,15 +96,17 @@ def generate_yearly_capabilities_report():
         else:
             reliability = "ОСТОРОЖНО"
 
-        ozon_results.append({
-            'days': days,
-            'description': description,
-            'chunks': chunks,
-            'requests': requests,
-            'delay': delay,
-            'time_minutes': time_minutes,
-            'reliability': reliability
-        })
+        ozon_results.append(
+            {
+                "days": days,
+                "description": description,
+                "chunks": chunks,
+                "requests": requests,
+                "delay": delay,
+                "time_minutes": time_minutes,
+                "reliability": reliability,
+            }
+        )
 
         logger.info(f"📅 {description:12s} ({days:3d} дней):")
         logger.info(f"   Чанков: {chunks:2d} | Запросов: {requests:2d} | Задержка: {delay:.1f}s")
@@ -129,8 +120,8 @@ def generate_yearly_capabilities_report():
     logger.info("-" * 70)
 
     for i, (days, description, _) in enumerate(periods):
-        wb_time = wb_results[i]['time_minutes']
-        ozon_time = ozon_results[i]['time_minutes']
+        wb_time = wb_results[i]["time_minutes"]
+        ozon_time = ozon_results[i]["time_minutes"]
 
         if ozon_time < wb_time:
             winner = "OZON"
@@ -148,15 +139,21 @@ def generate_yearly_capabilities_report():
     logger.info("")
 
     # Годовой период
-    wb_year = next(r for r in wb_results if r['days'] == 365)
-    ozon_year = next(r for r in ozon_results if r['days'] == 365)
+    wb_year = next(r for r in wb_results if r["days"] == 365)
+    ozon_year = next(r for r in ozon_results if r["days"] == 365)
 
     logger.info("📅 ГОДОВОЙ ПЕРИОД (365 дней):")
-    logger.info(f"   WB:   {wb_year['chunks']} чанков, {wb_year['time_minutes']:.1f} мин ({wb_year['reliability']})")
-    logger.info(f"   Ozon: {ozon_year['chunks']} чанков, {ozon_year['time_minutes']:.1f} мин ({ozon_year['reliability']})")
+    logger.info(
+        f"   WB:   {wb_year['chunks']} чанков, {wb_year['time_minutes']:.1f} мин ({wb_year['reliability']})"
+    )
+    logger.info(
+        f"   Ozon: {ozon_year['chunks']} чанков, {ozon_year['time_minutes']:.1f} мин ({ozon_year['reliability']})"
+    )
 
-    if ozon_year['time_minutes'] < wb_year['time_minutes']:
-        logger.info(f"   🏆 OZON быстрее на {wb_year['time_minutes'] - ozon_year['time_minutes']:.1f} минут")
+    if ozon_year["time_minutes"] < wb_year["time_minutes"]:
+        logger.info(
+            f"   🏆 OZON быстрее на {wb_year['time_minutes'] - ozon_year['time_minutes']:.1f} минут"
+        )
 
     logger.info("")
 
@@ -219,12 +216,13 @@ def generate_yearly_capabilities_report():
     logger.info("   Год обрабатывается ~3 минуты для обеих платформ")
 
     return {
-        'wb_results': wb_results,
-        'ozon_results': ozon_results,
-        'year_wb_time': wb_year['time_minutes'],
-        'year_ozon_time': ozon_year['time_minutes'],
-        'total_year_time': wb_year['time_minutes'] + ozon_year['time_minutes']
+        "wb_results": wb_results,
+        "ozon_results": ozon_results,
+        "year_wb_time": wb_year["time_minutes"],
+        "year_ozon_time": ozon_year["time_minutes"],
+        "total_year_time": wb_year["time_minutes"] + ozon_year["time_minutes"],
     }
+
 
 if __name__ == "__main__":
     report = generate_yearly_capabilities_report()

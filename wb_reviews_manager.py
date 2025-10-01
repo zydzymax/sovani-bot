@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Менеджер отзывов Wildberries с ChatGPT интеграцией
+"""Менеджер отзывов Wildberries с ChatGPT интеграцией
 
 ОСНОВНЫЕ КЛАССЫ:
 - WBReview: Структура данных отзыва WB
@@ -31,22 +30,22 @@
 ПОСЛЕДНЕЕ ИСПРАВЛЕНИЕ: Сентябрь 2025 (парсинг имен и рейтингов)
 """
 
-import asyncio
-import json
 import logging
-import aiohttp
-from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
+from typing import Any
+
+import aiohttp
 
 import api_clients_main as api_clients
 from config import Config
 
 logger = logging.getLogger(__name__)
 
+
 @dataclass
 class WBReview:
     """Структура отзыва WB"""
+
     id: str
     product_name: str
     customer_name: str
@@ -55,16 +54,17 @@ class WBReview:
     created_at: str
     has_photos: bool
     has_videos: bool
-    photos: List[str]
-    videos: List[str]
+    photos: list[str]
+    videos: list[str]
     answered: bool
-    answer_text: Optional[str] = None
+    answer_text: str | None = None
+
 
 class ChatGPTReviewProcessor:
     """Обработчик отзывов через ChatGPT API"""
 
     def __init__(self):
-        self.api_key = getattr(Config, 'OPENAI_API_KEY', None)
+        self.api_key = getattr(Config, "OPENAI_API_KEY", None)
         if not self.api_key:
             logger.warning("OPENAI_API_KEY не найден в конфигурации")
 
@@ -79,33 +79,29 @@ class ChatGPTReviewProcessor:
 
         try:
             headers = {
-                'Authorization': f'Bearer {self.api_key}',
-                'Content-Type': 'application/json'
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json",
             }
 
             payload = {
                 "model": "gpt-4",
                 "messages": [
-                    {
-                        "role": "system",
-                        "content": self._get_system_prompt()
-                    },
-                    {
-                        "role": "user",
-                        "content": prompt
-                    }
+                    {"role": "system", "content": self._get_system_prompt()},
+                    {"role": "user", "content": prompt},
                 ],
                 "max_tokens": 300,
-                "temperature": 0.8  # Увеличиваем для большей уникальности
+                "temperature": 0.8,  # Увеличиваем для большей уникальности
             }
 
             async with aiohttp.ClientSession() as session:
                 async with session.post(self.base_url, headers=headers, json=payload) as response:
                     if response.status == 200:
                         data = await response.json()
-                        return data['choices'][0]['message']['content'].strip()
+                        return data["choices"][0]["message"]["content"].strip()
                     else:
-                        logger.error(f"ChatGPT API error {response.status}: {await response.text()}")
+                        logger.error(
+                            f"ChatGPT API error {response.status}: {await response.text()}"
+                        )
                         return self._get_fallback_response(review)
 
         except Exception as e:
@@ -161,6 +157,7 @@ class ChatGPTReviewProcessor:
         else:
             return f"Спасибо за отзыв, {name}. Команда SoVAni обязательно изучит ваши замечания. Будем рады помочь решить любые вопросы!"
 
+
 class WBReviewsManager:
     """Менеджер для работы с отзывами WB"""
 
@@ -168,7 +165,7 @@ class WBReviewsManager:
         self.wb_api = api_clients.wb_api
         self.gpt_processor = ChatGPTReviewProcessor()
 
-    async def get_new_reviews(self, limit: int = 50) -> List[WBReview]:
+    async def get_new_reviews(self, limit: int = 50) -> list[WBReview]:
         """Получение новых отзывов с WB"""
         try:
             # Используем существующий метод получения отзывов
@@ -191,7 +188,7 @@ class WBReviewsManager:
             logger.error(f"Ошибка получения отзывов WB: {e}")
             return []
 
-    async def get_all_unanswered_reviews(self, limit: int = 200) -> List[WBReview]:
+    async def get_all_unanswered_reviews(self, limit: int = 200) -> list[WBReview]:
         """Получение ВСЕХ неотвеченных отзывов с WB (для первого подключения)"""
         try:
             logger.info("Получение всех неотвеченных отзывов WB...")
@@ -221,7 +218,9 @@ class WBReviewsManager:
             unanswered_count = len([r for r in final_reviews if not r.answered])
             answered_count = len([r for r in final_reviews if r.answered])
 
-            logger.info(f"Найдено {len(final_reviews)} отзывов WB: {unanswered_count} неотвеченных, {answered_count} отвеченных")
+            logger.info(
+                f"Найдено {len(final_reviews)} отзывов WB: {unanswered_count} неотвеченных, {answered_count} отвеченных"
+            )
 
             return final_reviews
 
@@ -229,29 +228,31 @@ class WBReviewsManager:
             logger.error(f"Ошибка получения всех отзывов WB: {e}")
             return []
 
-    async def _get_recent_reviews(self) -> List[Dict]:
+    async def _get_recent_reviews(self) -> list[dict]:
         """Получение последних отзывов (включая отвеченные)"""
         try:
             url = f"{self.wb_api.BASE_URL}/api/v1/feedbacks"
-            headers = self.wb_api._get_headers('feedbacks')
+            headers = self.wb_api._get_headers("feedbacks")
 
             # Параметры для получения отвеченных отзывов
             params = {
-                'isAnswered': 'true',  # Получаем отвеченные отзывы
-                'take': 50,           # Меньше лимит для недавних отзывов
-                'skip': 0
+                "isAnswered": "true",  # Получаем отвеченные отзывы
+                "take": 50,  # Меньше лимит для недавних отзывов
+                "skip": 0,
             }
 
             logger.info(f"📋 Параметры для получения недавних отзывов: {params}")
-            response_data = await self.wb_api._make_request_with_retry('GET', url, headers, params=params)
+            response_data = await self.wb_api._make_request_with_retry(
+                "GET", url, headers, params=params
+            )
 
             if response_data:
                 # Обрабатываем структуру ответа как в get_all_unanswered_feedbacks
                 if isinstance(response_data, dict):
-                    if 'data' in response_data:
-                        data_section = response_data.get('data', {})
-                        if 'feedbacks' in data_section:
-                            return data_section.get('feedbacks', [])
+                    if "data" in response_data:
+                        data_section = response_data.get("data", {})
+                        if "feedbacks" in data_section:
+                            return data_section.get("feedbacks", [])
                         else:
                             return data_section if isinstance(data_section, list) else []
                     else:
@@ -265,9 +266,8 @@ class WBReviewsManager:
             logger.error(f"Ошибка получения недавних отзывов: {e}")
             return []
 
-    def _parse_wb_review(self, raw_review: Dict) -> Optional[WBReview]:
-        """
-        Парсинг сырого отзыва от WB API в структурированный объект
+    def _parse_wb_review(self, raw_review: dict) -> WBReview | None:
+        """Парсинг сырого отзыва от WB API в структурированный объект
 
         КРИТИЧЕСКИ ВАЖНЫЕ ИСПРАВЛЕНИЯ (Сентябрь 2025):
         1. Имена покупателей: извлекаются из userName (НЕ fallback "Покупатель")
@@ -283,57 +283,64 @@ class WBReviewsManager:
 
         Raises:
             Exception: При критических ошибках парсинга (логируется)
+
         """
         try:
             # Определяем наличие медиафайлов
-            photos = raw_review.get('photoLinks', []) or []
-            videos = raw_review.get('videoLinks', []) or []
+            photos = raw_review.get("photoLinks", []) or []
+            videos = raw_review.get("videoLinks", []) or []
 
             # ИСПРАВЛЕНИЕ: Правильное извлечение названия товара из productDetails
             # WB API хранит название в productDetails.productName, а не в корне
-            product_details = raw_review.get('productDetails', {})
-            product_name = product_details.get('productName', 'Товар')
+            product_details = raw_review.get("productDetails", {})
+            product_name = product_details.get("productName", "Товар")
 
             return WBReview(
-                id=str(raw_review.get('id', '')),
+                id=str(raw_review.get("id", "")),
                 product_name=product_name,
-                customer_name=raw_review.get('userName', 'Покупатель'),  # Реальные имена покупателей
-                rating=int(raw_review.get('productValuation') or 1),  # ИСПРАВЛЕНИЕ: убран fallback на 5 звезд
-                text=raw_review.get('text', '').strip(),
-                created_at=raw_review.get('createdDate', ''),
+                customer_name=raw_review.get(
+                    "userName", "Покупатель"
+                ),  # Реальные имена покупателей
+                rating=int(
+                    raw_review.get("productValuation") or 1
+                ),  # ИСПРАВЛЕНИЕ: убран fallback на 5 звезд
+                text=raw_review.get("text", "").strip(),
+                created_at=raw_review.get("createdDate", ""),
                 has_photos=len(photos) > 0,
                 has_videos=len(videos) > 0,
                 photos=photos,
                 videos=videos,
-                answered=raw_review.get('isAnswered', False),
-                answer_text=raw_review.get('answer', {}).get('text') if raw_review.get('answer') else None
+                answered=raw_review.get("isAnswered", False),
+                answer_text=(
+                    raw_review.get("answer", {}).get("text") if raw_review.get("answer") else None
+                ),
             )
 
         except Exception as e:
             logger.error(f"Ошибка парсинга отзыва: {e}")
             return None
 
-    async def process_review(self, review: WBReview) -> Dict[str, Any]:
+    async def process_review(self, review: WBReview) -> dict[str, Any]:
         """Обработка отзыва и генерация ответа"""
         try:
             # Генерируем ответ через ChatGPT
             response_text = await self.gpt_processor.generate_review_response(review)
 
             return {
-                'review': review,
-                'generated_response': response_text,
-                'needs_approval': review.rating <= 3,  # 1-3 звезды требуют одобрения
-                'auto_respond': review.rating >= 4     # 4-5 звезд отвечаем автоматически
+                "review": review,
+                "generated_response": response_text,
+                "needs_approval": review.rating <= 3,  # 1-3 звезды требуют одобрения
+                "auto_respond": review.rating >= 4,  # 4-5 звезд отвечаем автоматически
             }
 
         except Exception as e:
             logger.error(f"Ошибка обработки отзыва {review.id}: {e}")
             return {
-                'review': review,
-                'generated_response': f"Спасибо за отзыв, {review.customer_name}! Команда SoVAni ценит ваше мнение.",
-                'needs_approval': True,
-                'auto_respond': False,
-                'error': str(e)
+                "review": review,
+                "generated_response": f"Спасибо за отзыв, {review.customer_name}! Команда SoVAni ценит ваше мнение.",
+                "needs_approval": True,
+                "auto_respond": False,
+                "error": str(e),
             }
 
     async def send_review_response(self, review_id: str, response_text: str) -> bool:
@@ -357,6 +364,7 @@ class WBReviewsManager:
     def needs_user_approval(self, review: WBReview) -> bool:
         """Определяет, нужно ли одобрение пользователя"""
         return review.rating <= 3 and not review.answered
+
 
 # Глобальный экземпляр менеджера отзывов
 reviews_manager = WBReviewsManager()

@@ -1,10 +1,8 @@
-"""
-Утилиты для мониторинга и отладки rate limiter
-"""
+"""Утилиты для мониторинга и отладки rate limiter"""
 
 import asyncio
 import logging
-from typing import Dict, Any
+
 from rate_limiter import get_rate_limit_stats, rate_limiter
 
 logger = logging.getLogger(__name__)
@@ -17,14 +15,14 @@ async def monitor_api_usage() -> str:
     report = "📊 **Rate Limiter Status Report**\n\n"
 
     for api_name, stat in stats.items():
-        if stat['requests_last_minute'] > 0 or api_name in ['wb_advertising', 'ozon_general']:
+        if stat["requests_last_minute"] > 0 or api_name in ["wb_advertising", "ozon_general"]:
             report += f"🔹 **{api_name.upper()}**\n"
             report += f"   • Запросы: {stat['requests_last_minute']}/{stat['requests_per_minute_limit']} req/min\n"
             report += f"   • Burst токены: {stat['burst_tokens_remaining']}/{stat['burst_limit']}\n"
             report += f"   • Мин. интервал: {stat['min_interval_ms']}ms\n"
 
             # Процент использования
-            usage_percent = (stat['requests_last_minute'] / stat['requests_per_minute_limit']) * 100
+            usage_percent = (stat["requests_last_minute"] / stat["requests_per_minute_limit"]) * 100
             if usage_percent > 80:
                 report += f"   • ⚠️ Высокая нагрузка: {usage_percent:.1f}%\n"
             elif usage_percent > 50:
@@ -33,7 +31,7 @@ async def monitor_api_usage() -> str:
                 report += f"   • ✅ Низкая нагрузка: {usage_percent:.1f}%\n"
 
             # Оставшиеся burst токены
-            burst_percent = (stat['burst_tokens_remaining'] / stat['burst_limit']) * 100
+            burst_percent = (stat["burst_tokens_remaining"] / stat["burst_limit"]) * 100
             if burst_percent < 20:
                 report += f"   • 🔴 Мало burst токенов: {burst_percent:.0f}%\n"
 
@@ -54,7 +52,7 @@ async def simulate_rate_limiting_test() -> str:
         from rate_limiter import with_rate_limit
 
         start_time = asyncio.get_event_loop().time()
-        await with_rate_limit('wb_advertising')
+        await with_rate_limit("wb_advertising")
         end_time = asyncio.get_event_loop().time()
 
         wait_time = (end_time - start_time) * 1000
@@ -66,17 +64,19 @@ async def simulate_rate_limiting_test() -> str:
     # Тест 2: Проверка burst токенов
     test_results.append("\n**Тест 2: Burst токены**")
     try:
-        initial_stats = get_rate_limit_stats()['wb_advertising']
+        initial_stats = get_rate_limit_stats()["wb_advertising"]
 
         # Делаем несколько быстрых запросов
         for i in range(3):
-            await with_rate_limit('wb_advertising')
+            await with_rate_limit("wb_advertising")
 
-        final_stats = get_rate_limit_stats()['wb_advertising']
+        final_stats = get_rate_limit_stats()["wb_advertising"]
 
-        burst_used = initial_stats['burst_tokens_remaining'] - final_stats['burst_tokens_remaining']
+        burst_used = initial_stats["burst_tokens_remaining"] - final_stats["burst_tokens_remaining"]
         test_results.append(f"✅ Использовано burst токенов: {burst_used}")
-        test_results.append(f"✅ Осталось: {final_stats['burst_tokens_remaining']}/{final_stats['burst_limit']}")
+        test_results.append(
+            f"✅ Осталось: {final_stats['burst_tokens_remaining']}/{final_stats['burst_limit']}"
+        )
 
     except Exception as e:
         test_results.append(f"❌ Ошибка: {e}")
@@ -111,20 +111,28 @@ def get_rate_limiter_recommendations() -> str:
     recommendations.append("💡 **Рекомендации по Rate Limiting**\n")
 
     for api_name, stat in stats.items():
-        if stat['requests_last_minute'] > 0:
-            usage_percent = (stat['requests_last_minute'] / stat['requests_per_minute_limit']) * 100
+        if stat["requests_last_minute"] > 0:
+            usage_percent = (stat["requests_last_minute"] / stat["requests_per_minute_limit"]) * 100
 
             if usage_percent > 90:
-                recommendations.append(f"🔴 **{api_name}**: Критическая нагрузка! Снизите частоту запросов")
+                recommendations.append(
+                    f"🔴 **{api_name}**: Критическая нагрузка! Снизите частоту запросов"
+                )
             elif usage_percent > 70:
-                recommendations.append(f"🟡 **{api_name}**: Высокая нагрузка. Рассмотрите кеширование")
+                recommendations.append(
+                    f"🟡 **{api_name}**: Высокая нагрузка. Рассмотрите кеширование"
+                )
             elif usage_percent > 50:
-                recommendations.append(f"🟢 **{api_name}**: Умеренная нагрузка. Можно увеличить частоту")
+                recommendations.append(
+                    f"🟢 **{api_name}**: Умеренная нагрузка. Можно увеличить частоту"
+                )
 
             # Проверка burst токенов
-            burst_percent = (stat['burst_tokens_remaining'] / stat['burst_limit']) * 100
+            burst_percent = (stat["burst_tokens_remaining"] / stat["burst_limit"]) * 100
             if burst_percent < 30:
-                recommendations.append(f"⚠️ **{api_name}**: Мало burst токенов. Добавьте паузы между запросами")
+                recommendations.append(
+                    f"⚠️ **{api_name}**: Мало burst токенов. Добавьте паузы между запросами"
+                )
 
     if len(recommendations) == 1:  # Только заголовок
         recommendations.append("✅ Все API работают в оптимальном режиме")

@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
-"""
-ДИАГНОСТИКА ФОРМАТА ДАТ В WB API
+"""ДИАГНОСТИКА ФОРМАТА ДАТ В WB API
 Анализируем почему фильтрация обнуляет все данные
 """
 
 import asyncio
 import logging
-from real_data_reports import RealDataFinancialReports
-from api_chunking import ChunkedAPIManager
-import api_clients_main as api_clients
 
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+import api_clients_main as api_clients
+from api_chunking import ChunkedAPIManager
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
+
 
 async def diagnose_date_formats():
     """Диагностика форматов дат в WB API"""
-
     logger.info("🔍 ДИАГНОСТИКА ФОРМАТОВ ДАТ В WB API")
     logger.info("=" * 60)
 
@@ -40,18 +39,20 @@ async def diagnose_date_formats():
             # Анализируем первые 10 записей
             logger.info("🗓️ АНАЛИЗ ДАТ В SALES:")
             for i, record in enumerate(sales_data[:10]):
-                raw_date = record.get('date', '')
+                raw_date = record.get("date", "")
 
                 # Парсим дату как в системе
-                if 'T' in raw_date:
-                    parsed_date = raw_date.split('T')[0]
+                if "T" in raw_date:
+                    parsed_date = raw_date.split("T")[0]
                 else:
                     parsed_date = raw_date[:10]
 
                 # Проверяем попадание в диапазон
                 in_range = date_from <= parsed_date <= date_to
 
-                logger.info(f"  Запись {i+1}: '{raw_date}' → '{parsed_date}' (в диапазоне: {in_range})")
+                logger.info(
+                    f"  Запись {i+1}: '{raw_date}' → '{parsed_date}' (в диапазоне: {in_range})"
+                )
 
                 if i >= 5:  # Ограничиваем вывод
                     break
@@ -64,9 +65,9 @@ async def diagnose_date_formats():
             out_range_count = 0
 
             for record in sales_data:
-                raw_date = record.get('date', '')
-                if 'T' in raw_date:
-                    parsed_date = raw_date.split('T')[0]
+                raw_date = record.get("date", "")
+                if "T" in raw_date:
+                    parsed_date = raw_date.split("T")[0]
                 else:
                     parsed_date = raw_date[:10]
 
@@ -90,7 +91,7 @@ async def diagnose_date_formats():
                 logger.info(f"    {date_key}: {count} записей ({status})")
 
             logger.info("")
-            logger.info(f"📊 ИТОГОВАЯ СТАТИСТИКА:")
+            logger.info("📊 ИТОГОВАЯ СТАТИСТИКА:")
             logger.info(f"    Всего записей: {len(sales_data)}")
             logger.info(f"    В диапазоне: {in_range_count}")
             logger.info(f"    Вне диапазона: {out_range_count}")
@@ -104,13 +105,13 @@ async def diagnose_date_formats():
             total_out_range = 0
 
             for record in sales_data:
-                raw_date = record.get('date', '')
-                if 'T' in raw_date:
-                    parsed_date = raw_date.split('T')[0]
+                raw_date = record.get("date", "")
+                if "T" in raw_date:
+                    parsed_date = raw_date.split("T")[0]
                 else:
                     parsed_date = raw_date[:10]
 
-                price = record.get('priceWithDisc', 0) or 0
+                price = record.get("priceWithDisc", 0) or 0
 
                 if date_from <= parsed_date <= date_to:
                     total_in_range += price
@@ -140,9 +141,9 @@ async def diagnose_date_formats():
             orders_out_range = 0
 
             for record in orders_data:
-                raw_date = record.get('date', '')
-                if 'T' in raw_date:
-                    parsed_date = raw_date.split('T')[0]
+                raw_date = record.get("date", "")
+                if "T" in raw_date:
+                    parsed_date = raw_date.split("T")[0]
                 else:
                     parsed_date = raw_date[:10]
 
@@ -179,17 +180,18 @@ async def diagnose_date_formats():
             logger.info(f"    Ожидаемая сумма после фильтрации: {total_in_range:,.0f} ₽")
 
         return {
-            'sales_total': len(sales_data) if sales_data else 0,
-            'sales_in_range': in_range_count,
-            'sales_out_range': out_range_count,
-            'sum_in_range': total_in_range if 'total_in_range' in locals() else 0,
-            'sum_out_range': total_out_range if 'total_out_range' in locals() else 0,
-            'date_range_issue': in_range_count == 0 and sales_data is not None
+            "sales_total": len(sales_data) if sales_data else 0,
+            "sales_in_range": in_range_count,
+            "sales_out_range": out_range_count,
+            "sum_in_range": total_in_range if "total_in_range" in locals() else 0,
+            "sum_out_range": total_out_range if "total_out_range" in locals() else 0,
+            "date_range_issue": in_range_count == 0 and sales_data is not None,
         }
 
     except Exception as e:
         logger.error(f"❌ Ошибка диагностики: {e}")
         return None
+
 
 if __name__ == "__main__":
     result = asyncio.run(diagnose_date_formats())
