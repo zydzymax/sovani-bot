@@ -126,6 +126,15 @@ class Settings(BaseSettings):
     cashflow_limit: float = Field(0.0, description="Cash flow budget limit (0=unlimited)")
     planner_solver: str = Field("heuristic", description="Planner algorithm: heuristic or pulp")
 
+    # === Pricing & Promo (Stage 14) ===
+    pricing_min_margin_pct: float = Field(0.10, description="Minimum profit margin")
+    pricing_max_discount_pct: float = Field(0.30, description="Maximum allowed discount")
+    pricing_min_price_step: int = Field(10, description="Minimum price change step (rubles)")
+    pricing_map_json: str = Field("{}", description="Minimum advertised price by SKU (JSON)")
+    promo_min_window_days: int = Field(7, description="Minimum promo comparison window")
+    promo_max_window_days: int = Field(28, description="Maximum promo comparison window")
+    pricing_explain_service_level: float = Field(0.88, description="Service level for explanations")
+
 
 @lru_cache
 def get_settings() -> Settings:
