@@ -11,9 +11,9 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
+from real_data_reports import RealDataFinancialReports
 
 from expenses import CalculationType, ExpenseManager, ExpenseType
-from real_data_reports import RealDataFinancialReports
 
 logger = logging.getLogger(__name__)
 
@@ -409,10 +409,10 @@ class CostDataProcessor:
                 # Улучшаем расчеты с учетом детальной себестоимости
                 enhanced_pnl["cost_data_used"] = True
                 enhanced_pnl["cost_data_statistics"] = cost_data.get("statistics", {})
-                enhanced_pnl[
-                    "enhanced_calculations"
-                ] = await self._enhance_calculations_with_cost_data(
-                    base_pnl, cost_data, date_from, date_to
+                enhanced_pnl["enhanced_calculations"] = (
+                    await self._enhance_calculations_with_cost_data(
+                        base_pnl, cost_data, date_from, date_to
+                    )
                 )
             else:
                 enhanced_pnl["cost_data_used"] = False

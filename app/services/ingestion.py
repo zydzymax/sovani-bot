@@ -12,14 +12,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import date, datetime, timedelta
+from datetime import date
 
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.core.logging import get_logger
-from app.db.models import DailySales, SKU, Warehouse
+from app.db.models import SKU, DailySales, Warehouse
 
 log = get_logger("sovani_bot.ingestion")
 
@@ -49,6 +49,7 @@ def ensure_sku(
 
     Returns:
         SKU id
+
     """
     # Try to find existing SKU
     stmt = select(SKU).where(SKU.marketplace == marketplace)
@@ -89,6 +90,7 @@ def ensure_warehouse(db: Session, marketplace: str, code: str, name: str | None 
 
     Returns:
         Warehouse id
+
     """
     # Try to find existing warehouse
     stmt = select(Warehouse).where(Warehouse.marketplace == marketplace, Warehouse.code == code)
@@ -117,6 +119,7 @@ def collect_wb_sales_stub(db: Session, d_from: date, d_to: date) -> int:
 
     Returns:
         Number of upserted records
+
     """
     log.info("wb_sales_collection_started", extra={"from": str(d_from), "to": str(d_to)})
 

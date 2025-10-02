@@ -6,7 +6,6 @@ Idempotent data collection with src_hash-based deduplication.
 
 from __future__ import annotations
 
-import asyncio
 import hashlib
 import json
 from datetime import date, timedelta
@@ -19,7 +18,7 @@ from app.clients.ozon import OzonClient
 from app.clients.wb import WBClient
 from app.core.config import get_settings
 from app.core.logging import get_logger
-from app.db.models import Cashflow, DailySales, DailyStock, SKU, Warehouse
+from app.db.models import SKU, Cashflow, DailySales, DailyStock, Warehouse
 from app.services.normalizers_ozon import norm_stocks as norm_ozon_stocks
 from app.services.normalizers_ozon import norm_transactions as norm_ozon_transactions
 from app.services.normalizers_wb import norm_sales as norm_wb_sales

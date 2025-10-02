@@ -9,9 +9,9 @@ from datetime import datetime
 from typing import Any
 
 from aiogram import types
+from real_data_reports import RealDataFinancialReports
 
 from api_chunking import APIChunker
-from real_data_reports import RealDataFinancialReports
 
 logger = logging.getLogger(__name__)
 

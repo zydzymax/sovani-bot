@@ -11,6 +11,7 @@ Idempotent: can be run multiple times for the same date.
 
 from __future__ import annotations
 
+import hashlib
 from datetime import date, timedelta
 
 from sqlalchemy import select
@@ -20,12 +21,12 @@ from sqlalchemy.orm import Session
 from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.db.models import (
+    SKU,
     AdviceSupply,
     CostPriceHistory,
     DailySales,
     DailyStock,
     MetricsDaily,
-    SKU,
 )
 from app.domain.finance.pnl import (
     calc_cogs,
@@ -42,6 +43,43 @@ from app.domain.supply.inventory import (
 log = get_logger("sovani_bot.recalc_metrics")
 
 
+def build_advice_explanation(
+    marketplace: str,
+    wh_name: str,
+    window_days: int,
+    sv: float,
+    forecast: int,
+    safety: int,
+    on_hand: int,
+    in_transit: int,
+    recommended: int,
+) -> tuple[str, str]:
+    """Build human-readable explanation for supply recommendation.
+
+    Args:
+        marketplace: Marketplace name (WB, OZON)
+        wh_name: Warehouse name
+        window_days: Planning window (days)
+        sv: Sales velocity (units/day)
+        forecast: Forecasted demand
+        safety: Safety stock quantity
+        on_hand: Current stock on hand
+        in_transit: Stock in transit
+        recommended: Recommended order quantity
+
+    Returns:
+        Tuple of (explanation_text, hash)
+
+    """
+    text = (
+        f"{marketplace}, {wh_name}: SV{window_days}={sv:.2f}/день, окно={window_days}, "
+        f"прогноз={forecast}, safety={safety}, остаток={on_hand}, в пути={in_transit} "
+        f"→ рекомендовано {recommended}."
+    )
+    h = hashlib.sha256(text.encode("utf-8")).hexdigest()
+    return text, h
+
+
 def recalc_metrics_for_date(db: Session, d: date) -> int:
     """Recalculate metrics for given date.
 
@@ -51,6 +89,7 @@ def recalc_metrics_for_date(db: Session, d: date) -> int:
 
     Returns:
         Number of SKUs processed
+
     """
     settings = get_settings()
 
@@ -189,6 +228,110 @@ def recalc_metrics_for_date(db: Session, d: date) -> int:
     return processed
 
 
-# TODO Stage 8: Implement generate_supply_advice(db, d) -> int
-# - Calculate recommendations for windows (14 and 28 days)
-# - Upsert into AdviceSupply table
+def generate_supply_advice(db: Session, d: date) -> int:
+    """Generate supply recommendations with explainability.
+
+    Args:
+        db: Database session
+        d: Date for recommendations (UTC)
+
+    Returns:
+        Number of advice records generated
+
+    """
+    settings = get_settings()
+    log.info("supply_advice_started", extra={"date": str(d)})
+
+    # Get all SKU/warehouse combinations with stock data
+    stmt = (
+        select(
+            DailyStock.sku_id, DailyStock.warehouse_id, DailyStock.on_hand, DailyStock.in_transit
+        )
+        .where(DailyStock.d == d)
+        .distinct()
+    )
+    stock_rows = db.execute(stmt).all()
+
+    advice_count = 0
+
+    for sku_id, warehouse_id, on_hand, in_transit in stock_rows:
+        # Get SKU and warehouse info for explainability
+        sku = db.get(SKU, sku_id)
+        from app.db.models import Warehouse
+
+        warehouse = db.get(Warehouse, warehouse_id)
+
+        if not sku or not warehouse:
+            continue
+
+        # Get metrics for this SKU
+        metrics_stmt = select(MetricsDaily).where(
+            MetricsDaily.d == d, MetricsDaily.sku_id == sku_id
+        )
+        metrics = db.execute(metrics_stmt).scalar()
+
+        if not metrics:
+            continue
+
+        # Generate advice for both 14 and 28 day windows
+        for window_days in [14, 28]:
+            sv = metrics.sv14 if window_days == 14 else metrics.sv28
+
+            if sv <= 0:
+                continue  # No sales velocity, no recommendation
+
+            # Calculate recommendation
+            forecast = int(sv * window_days)
+            safety = int(sv * (window_days**0.5) * 1.5)  # 1.5 safety coefficient
+            recommended = recommend_supply(sv, window_days, on_hand, in_transit, safety_coeff=1.5)
+
+            # Build explanation with rationale
+            explain_text, rationale_hash = build_advice_explanation(
+                marketplace=sku.marketplace or "N/A",
+                wh_name=warehouse.name or "N/A",
+                window_days=window_days,
+                sv=sv,
+                forecast=forecast,
+                safety=safety,
+                on_hand=on_hand,
+                in_transit=in_transit,
+                recommended=recommended,
+            )
+
+            # Upsert advice with rationale_hash
+            advice_stmt = insert(AdviceSupply).values(
+                d=d,
+                sku_id=sku_id,
+                warehouse_id=warehouse_id,
+                window_days=window_days,
+                recommended_qty=recommended,
+                rationale_hash=rationale_hash,
+            )
+
+            if db.bind.dialect.name == "postgresql":
+                advice_stmt = advice_stmt.on_conflict_do_update(
+                    index_elements=["d", "sku_id", "warehouse_id", "window_days"],
+                    set_=dict(
+                        recommended_qty=advice_stmt.excluded.recommended_qty,
+                        rationale_hash=advice_stmt.excluded.rationale_hash,
+                    ),
+                )
+            else:
+                advice_stmt = advice_stmt.on_conflict_do_update(
+                    index_elements=["d", "sku_id", "warehouse_id", "window_days"],
+                    set_=dict(
+                        recommended_qty=advice_stmt.excluded.recommended_qty,
+                        rationale_hash=advice_stmt.excluded.rationale_hash,
+                    ),
+                )
+
+            db.execute(advice_stmt)
+            advice_count += 1
+
+            # Log explanation for debugging
+            log.debug("supply_advice_generated", extra={"explanation": explain_text})
+
+    db.commit()
+    log.info("supply_advice_completed", extra={"date": str(d), "advice_count": advice_count})
+
+    return advice_count

@@ -7,7 +7,6 @@ from datetime import datetime
 from typing import Any
 
 import pandas as pd
-
 from real_data_reports import RealDataFinancialReports
 
 logger = logging.getLogger(__name__)

@@ -35,6 +35,10 @@ from aiogram.types import (
 from aiogram.utils import executor
 from aiogram.utils.callback_data import CallbackData
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from cost_template_generator import CostTemplateGenerator
+
+# ЗАМЕНЕНО НА РЕАЛЬНУЮ СИСТЕМУ ОТЧЕТНОСТИ БЕЗ ФЕЙКОВ!
+from real_data_reports import generate_cumulative_financial_report, generate_real_financial_report
 
 import http_async
 from ai_reply import generate_question_reply, generate_review_reply
@@ -45,12 +49,15 @@ from api_clients_main import (
     post_answer_question,
 )
 from api_monitor import api_monitor
-from auto_reviews_processor import auto_processor
+from app.bot.middleware import RequestIdMiddleware
 
 # NEW: pydantic-settings based configuration with validation
-from app.core.config import config as Config, get_settings
+from app.core.config import config as Config
+from app.core.config import get_settings
 
-from cost_template_generator import CostTemplateGenerator
+# NEW: Structured JSON logging
+from app.core.logging import get_logger, setup_logging
+from auto_reviews_processor import auto_processor
 from db import (
     get_question,
     get_review,
@@ -76,16 +83,9 @@ from handlers.inventory import repl_recommendations, stock_snapshot
 from handlers.reports import dds_text, pnl_text, romi_text
 from handlers.reviews import reviews_new_last24
 
-# ЗАМЕНЕНО НА РЕАЛЬНУЮ СИСТЕМУ ОТЧЕТНОСТИ БЕЗ ФЕЙКОВ!
-from real_data_reports import generate_cumulative_financial_report, generate_real_financial_report
-
 # Система отзывов с ChatGPT
 from reviews_bot_handlers import setup_reviews_handlers
 from wb_excel_processor import wb_excel_processor
-
-# NEW: Structured JSON logging
-from app.core.logging import get_logger, set_request_id, setup_logging
-from app.bot.middleware import RequestIdMiddleware
 
 # Setup structured JSON logging
 log_level = os.getenv("LOG_LEVEL", "INFO")
@@ -3272,9 +3272,7 @@ async def cmd_add_expense(message: types.Message):
         platform = (
             parts[4]
             if len(parts) > 4 and parts[4] not in ["all", "both"]
-            else parts[4]
-            if len(parts) > 4
-            else None
+            else parts[4] if len(parts) > 4 else None
         )
         category = parts[5] if len(parts) > 5 else None
 

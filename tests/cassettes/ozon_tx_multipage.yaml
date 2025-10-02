@@ -1,0 +1,40 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Api-Key:
+      - '***'
+      Client-Id:
+      - '***'
+      Content-Type:
+      - application/json
+    method: POST
+    uri: https://api-seller.ozon.ru/v3/finance/transaction/list
+  response:
+    body:
+      string: '{"code":16, "message":"Client-Id and Api-Key headers are required"}'
+    headers:
+      Connection:
+      - keep-alive
+      Content-Length:
+      - '67'
+      Content-Type:
+      - application/json
+      Date:
+      - Thu, 02 Oct 2025 07:54:07 GMT
+      Server:
+      - nginx
+      Set-Cookie:
+      - abt_data=7.KMF7XAllu81SWwKN0UWEaAXoC9Mymfz1hI2STqKYZUM1PM0TwWXdAxydR5OJR4xOpTmTQvxr0BtzKlt1ho6ztDyTjzlyXKHSNFEMHHxeoMGNADC8IEWtBWNwAS0DIAjx_g2me38oWNXnVjxnto6AQKJJ5V4JWgTmxq_n0qUtO_Uui61z0hCNIrEXBL3BVG4r4dSvyVxyzHov7Av-KncJkUQji8-lTOG3t0AvX-43--HNbpfYWKm-JoplH8iytvHXN_L3TBex8V_6uwWX_Ni51L_0SOnd8A51ckRz6Cze-wbgc_iQx629uc1UUScsWdQJiKe8tap8ufnmDKS_F3lovkrOmuA;
+        expires=Fri, 02 Oct 2026 07:54:07 GMT; domain=ozon.ru; path=/; HttpOnly; secure;
+        SameSite=None
+      Vary:
+      - Origin
+      WWW-Authenticate:
+      - Client-Id and Api-Key headers are required
+      x-o3-trace-id:
+      - 3fc219ffb3f29505
+    status:
+      code: 401
+      message: Unauthorized
+version: 1

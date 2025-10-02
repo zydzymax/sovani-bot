@@ -34,6 +34,7 @@ def calc_revenue_net(
 
     Returns:
         Net revenue (can be negative if costs exceed gross revenue)
+
     """
     return revenue_gross - refunds_amount - promo_cost - delivery_cost - commission_amount
 
@@ -53,6 +54,7 @@ def calc_cogs(qty: int, d: date, sku_id: int, cost_history: list[tuple[date, flo
     Notes:
         - Finds the latest cost price where dt_from <= d
         - If no cost price found, returns 0.0 (should be logged as warning)
+
     """
     if qty <= 0:
         return 0.0
@@ -80,6 +82,7 @@ def calc_profit(revenue_net: float, cogs: float, marketing: float = 0.0) -> floa
 
     Returns:
         Profit (can be negative)
+
     """
     return revenue_net - cogs - marketing
 
@@ -95,6 +98,7 @@ def calc_margin(profit: float, revenue_net: float) -> float:
 
     Returns:
         Margin percentage (0.0 if revenue_net is 0 or negative)
+
     """
     if revenue_net <= 0:
         return 0.0

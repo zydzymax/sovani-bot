@@ -29,6 +29,7 @@ def rolling_velocity(qty_by_day: list[int], window: int) -> float:
         10.0
         >>> rolling_velocity([], 7)
         0.0
+
     """
     if not qty_by_day:
         return 0.0
@@ -63,6 +64,7 @@ def stock_cover_days(on_hand: int, in_transit: int, velocity: float) -> float:
         10.0
         >>> stock_cover_days(100, 0, 0.0)
         999.0
+
     """
     if velocity <= 0:
         return 999.0  # Infinite cover (no sales)
@@ -103,6 +105,7 @@ def recommend_supply(
         57  # (5*28) + (1.5*2*√28) - 100 ≈ 56
         >>> recommend_supply(10.0, 14, 200, 50, 1.5, 0.0)
         0  # Already have enough stock
+
     """
     # Expected demand over window
     expected_demand = sv * window_days

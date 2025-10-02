@@ -11,11 +11,11 @@ from datetime import datetime, timedelta
 from typing import Any
 
 import openpyxl
-from openpyxl.styles import Font, PatternFill
-
 from cost_template_generator import CostTemplateGenerator
-from expenses import ExpenseManager
+from openpyxl.styles import Font, PatternFill
 from real_data_reports import RealDataFinancialReports
+
+from expenses import ExpenseManager
 
 logger = logging.getLogger(__name__)
 

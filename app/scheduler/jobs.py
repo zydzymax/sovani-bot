@@ -26,6 +26,7 @@ def collect_yesterday_data() -> dict[str, int]:
 
     Returns:
         Dict with collection stats (wb_sales, wb_stock, ozon_sales, etc.)
+
     """
     yesterday = date.today() - timedelta(days=1)
 
@@ -60,6 +61,7 @@ def recalc_recent_metrics(days: int = 35) -> dict[str, int]:
 
     Returns:
         Dict with processing stats per day
+
     """
     today = date.today()
     start_date = today - timedelta(days=days - 1)

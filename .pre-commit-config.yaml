@@ -32,3 +32,10 @@ repos:
     hooks:
       - id: gitleaks
         args: ["protect", "--staged"]
+
+  - repo: local
+    hooks:
+      - id: block-debug-scripts
+        name: Block committing debug/emergency scripts
+        entry: bash -c 'if git diff --cached --name-only | grep -E "(^|/)scripts/(emergency_|debug_|test_|.*_discrepancy_|.*\.disabled)"; then echo "❌ Remove or ignore debug/emergency scripts before commit"; exit 1; fi'
+        language: system

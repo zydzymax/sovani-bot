@@ -6,9 +6,10 @@
 import asyncio
 import logging
 
+from real_data_reports import RealDataFinancialReports
+
 import api_clients_main as api_clients
 from api_chunking import ChunkedAPIManager
-from real_data_reports import RealDataFinancialReports
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)

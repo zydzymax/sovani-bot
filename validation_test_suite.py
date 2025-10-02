@@ -12,9 +12,10 @@ import logging
 from dataclasses import asdict, dataclass
 from datetime import datetime, timedelta
 
+from real_data_reports import RealDataFinancialReports
+
 import api_clients_main as api_clients
 from api_chunking import ChunkedAPIManager
-from real_data_reports import RealDataFinancialReports
 
 # Настройка логирования
 logging.basicConfig(

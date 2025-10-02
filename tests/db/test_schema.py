@@ -7,16 +7,11 @@ from sqlalchemy import create_engine, inspect
 from sqlalchemy.orm import sessionmaker
 
 from app.db.models import (
-    AdviceSupply,
+    SKU,
     Base,
-    Cashflow,
-    CommissionRule,
     CostPriceHistory,
     DailySales,
-    DailyStock,
     MetricsDaily,
-    Review,
-    SKU,
     Warehouse,
 )
 
