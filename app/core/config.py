@@ -117,6 +117,15 @@ class Settings(BaseSettings):
         """Get set of viewer user IDs."""
         return set(self.readonly_tg_user_ids.split(",")) if self.readonly_tg_user_ids else set()
 
+    # === Supply Planner (Stage 13) ===
+    planner_safety_coeff: float = Field(1.2, description="Safety stock coefficient")
+    planner_min_batch: int = Field(5, description="Minimum batch size")
+    planner_multiplicity: int = Field(1, description="Order quantity multiplicity")
+    planner_max_per_slot: int = Field(500, description="Max quantity per slot")
+    warehouse_capacity_json: str = Field("{}", description="Warehouse capacity limits (JSON)")
+    cashflow_limit: float = Field(0.0, description="Cash flow budget limit (0=unlimited)")
+    planner_solver: str = Field("heuristic", description="Planner algorithm: heuristic or pulp")
+
 
 @lru_cache
 def get_settings() -> Settings:

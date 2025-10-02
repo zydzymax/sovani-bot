@@ -10,7 +10,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.core.metrics import app_info, app_uptime_seconds
 from app.web.middleware import PrometheusMiddleware
-from app.web.routers import advice, dashboard, export, healthcheck, inventory, reviews
+from app.web.routers import advice, dashboard, export, healthcheck, inventory, reviews, supply
 
 # Application start time for uptime calculation
 APP_START_TIME = time.time()
@@ -43,6 +43,7 @@ app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboar
 app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["Reviews"])
 app.include_router(inventory.router, prefix="/api/v1/inventory", tags=["Inventory"])
 app.include_router(advice.router, prefix="/api/v1/advice", tags=["Advice"])
+app.include_router(supply.router, tags=["Supply"])
 app.include_router(export.router, prefix="/api/v1/export", tags=["Export"])
 
 
