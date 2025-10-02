@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
 from app.ai.replies import generate_custom_reply
-from app.core.metrics import reviews_processed_total
+from app.core.metrics import reviews_classified_total, reviews_processed_total
 from app.db.models import Review
 from app.domain.reviews.classifier import classify_review
 from app.domain.reviews.templates import choose_template, personalize_reply
@@ -80,6 +80,13 @@ async def build_reply_for_review(review_id: str, db: Session) -> str:
         f"(rating={rating}, text_len={len(text)}, has_media={has_media})"
     )
 
+    # Track classification metrics
+    marketplace = review.marketplace or "unknown"
+    reviews_classified_total.labels(
+        marketplace=marketplace,
+        classification=classification,
+    ).inc()
+
     # 3. Generate reply based on classification
     if classification in {"typical_positive", "typical_negative", "typical_neutral"}:
         # Use template
@@ -101,8 +108,7 @@ async def build_reply_for_review(review_id: str, db: Session) -> str:
 
         log.info(f"Using AI for {review_id}: rating={rating}, text_len={len(text)}")
 
-    # Update metrics
-    marketplace = review.marketplace or "unknown"
+    # Update processing metrics
     reviews_processed_total.labels(
         marketplace=marketplace,
         status=reply_type,  # template or custom_ai
@@ -148,7 +154,7 @@ async def mark_reply_sent(db: Session, review_id: str, reply_text: str) -> None:
         .values(
             reply_status="sent",
             reply_id="local",
-            replied_at_utc=datetime.now(UTC),
+            replied_at_utc=datetime.now(timezone.utc),
             reply_text=reply_text,
         )
     )

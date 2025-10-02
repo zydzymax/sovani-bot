@@ -73,7 +73,13 @@ external_api_duration_seconds = Histogram(
 reviews_processed_total = Counter(
     "reviews_processed_total",
     "Total reviews processed",
-    ["marketplace", "status"],
+    ["marketplace", "status"],  # status: template, custom_ai
+)
+
+reviews_classified_total = Counter(
+    "reviews_classified_total",
+    "Total reviews classified by type",
+    ["marketplace", "classification"],  # classification: typical_positive, typical_negative, typical_neutral, atypical
 )
 
 advice_generated_total = Counter(
