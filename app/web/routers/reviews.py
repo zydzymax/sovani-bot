@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Path, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, update
 
 from app.db.models import Review
@@ -19,7 +19,9 @@ def get_reviews(
     db: DBSession,
     user: CurrentUser,
     status: str | None = Query(None, description="Filter by reply_status: pending|sent"),
-    marketplace: str | None = Query(None, pattern="^(WB|OZON)$", description="Filter by marketplace"),
+    marketplace: str | None = Query(
+        None, pattern="^(WB|OZON)$", description="Filter by marketplace"
+    ),
     rating: int | None = Query(None, ge=1, le=5, description="Filter by rating"),
     limit: int = Query(50, ge=1, le=200, description="Max reviews to return"),
     offset: int = Query(0, ge=0, description="Offset for pagination"),
@@ -102,7 +104,7 @@ def post_review_reply(
             reply_status="sent",
             reply_id="local",
             reply_text=payload.text,
-            replied_at_utc=datetime.now(timezone.utc),
+            replied_at_utc=datetime.now(UTC),
         )
     )
     db.commit()

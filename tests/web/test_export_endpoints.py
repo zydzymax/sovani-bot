@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.db.models import AdviceSupply, Base, DailySales, Review, SKU, Warehouse
+from app.db.models import SKU, AdviceSupply, Base, DailySales, Review, Warehouse
 from app.web.main import app
 
 
@@ -44,7 +44,7 @@ def test_db():
             sku_key="12345",
             rating=5,
             text="Great product!",
-            created_at_utc=datetime.now(timezone.utc),
+            created_at_utc=datetime.now(UTC),
             reply_status=None,
         )
     )
@@ -90,9 +90,7 @@ def client(test_db):
 
 def test_export_dashboard_csv(client):
     """Test exporting dashboard data as CSV."""
-    response = client.get(
-        "/api/v1/export/dashboard.csv?date_from=2025-01-01&date_to=2025-01-31"
-    )
+    response = client.get("/api/v1/export/dashboard.csv?date_from=2025-01-01&date_to=2025-01-31")
 
     assert response.status_code == 200
     assert response.headers["content-type"] == "text/csv; charset=utf-8"

@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import date
 
 from fastapi import APIRouter, Query, Response
-from sqlalchemy import func, select, text
+from sqlalchemy import select, text
 
 from app.db.models import SKU, AdviceSupply, DailyStock, MetricsDaily, Warehouse
 from app.web.deps import CurrentUser, DBSession
@@ -66,7 +66,9 @@ def export_dashboard_csv(
 def export_advice_xlsx(
     db: DBSession,
     user: CurrentUser,
-    advice_date: date = Query(default_factory=date.today, alias="date", description="Date for advice"),
+    advice_date: date = Query(
+        default_factory=date.today, alias="date", description="Date for advice"
+    ),
     window: int | None = Query(None, description="Planning window: 14 or 28 days"),
     sku_id: int | None = Query(None, description="Filter by SKU ID"),
     warehouse_id: int | None = Query(None, description="Filter by warehouse ID"),
@@ -151,7 +153,9 @@ def export_reviews_csv(
     db: DBSession,
     user: CurrentUser,
     status: str | None = Query(None, description="Filter by reply_status: pending|sent"),
-    marketplace: str | None = Query(None, pattern="^(WB|OZON)$", description="Filter by marketplace"),
+    marketplace: str | None = Query(
+        None, pattern="^(WB|OZON)$", description="Filter by marketplace"
+    ),
 ) -> Response:
     """Export reviews as CSV.
 

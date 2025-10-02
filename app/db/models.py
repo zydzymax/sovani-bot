@@ -318,3 +318,35 @@ class AdviceSupply(Base):
             name="uq_advice_day_sku_wh_win",
         ),
     )
+
+
+# =============================================================================
+# Monitoring Tables (Stage 11)
+# =============================================================================
+
+
+class JobRun(Base):
+    """Scheduler job execution log for monitoring.
+
+    Tracks all scheduled job runs with status, duration, and errors.
+    Used for observability and alerting.
+    """
+
+    __tablename__ = "job_runs"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    job_name: Mapped[str] = mapped_column(
+        String(100), index=True
+    )  # e.g., "sync_wb_orders", "check_reviews"
+    started_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    status: Mapped[str] = mapped_column(
+        String(20), index=True
+    )  # "success", "failed", "running"
+    duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
+    error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    metadata: Mapped[dict | None] = mapped_column(
+        JSON, nullable=True
+    )  # Extra context (e.g., records processed)
+
+    __table_args__ = (Index("ix_job_runs_name_started", "job_name", "started_at"),)

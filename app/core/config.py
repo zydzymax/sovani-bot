@@ -95,6 +95,13 @@ class Settings(BaseSettings):
     readonly_tg_user_ids: str = Field("", description="Comma-separated viewer user IDs")
     tma_origin: str = Field("*", description="TMA origin for CORS")
 
+    # === Monitoring & Alerts (Stage 11) ===
+    alert_threshold_disk: int = Field(90, description="Disk usage alert threshold (%)")
+    alert_threshold_memory: int = Field(90, description="Memory usage alert threshold (%)")
+    alert_threshold_job_failures: int = Field(
+        3, description="Consecutive job failures before alert"
+    )
+
     @property
     def effective_chatgpt_key(self) -> str | None:
         """Return ChatGPT API key with fallback to OpenAI key."""

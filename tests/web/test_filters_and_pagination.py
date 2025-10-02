@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, date, datetime
 
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.db.models import AdviceSupply, Base, DailySales, Review, SKU, Warehouse
+from app.db.models import SKU, AdviceSupply, Base, DailySales, Review, Warehouse
 from app.web.main import app
 
 
@@ -29,7 +29,7 @@ def test_db():
                 sku_key=f"SKU{i}",
                 rating=(i % 5) + 1,  # 1-5 stars
                 text=f"Review text {i}",
-                created_at_utc=datetime.now(timezone.utc),
+                created_at_utc=datetime.now(UTC),
                 reply_status="sent" if i < 10 else None,
                 reply_text=f"Reply {i}" if i < 10 else None,
             )
@@ -187,7 +187,6 @@ def test_advice_order_asc(client):
 def test_dashboard_top_sku_pagination(client):
     """Test dashboard top-sku with limit and offset."""
     # Add some sales data
-    from app.db.models import DailySales
 
     db = next(app.dependency_overrides[__import__("app.web.deps").get_db]())
     for i in range(10):

@@ -65,7 +65,9 @@ def get_top_sku(
     user: CurrentUser,
     date_from: date = Query(..., description="Start date"),
     date_to: date = Query(..., description="End date"),
-    metric: str = Query("revenue", pattern="^(revenue|profit|units)$", description="Metric: revenue|profit|units"),
+    metric: str = Query(
+        "revenue", pattern="^(revenue|profit|units)$", description="Metric: revenue|profit|units"
+    ),
     limit: int = Query(20, ge=1, le=100, description="Number of results per page"),
     offset: int = Query(0, ge=0, description="Number of results to skip"),
     order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),

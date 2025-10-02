@@ -103,9 +103,7 @@ def test_unauthorized_cannot_read(client_unauthorized):
 def test_admin_can_post_review_reply(client_admin):
     """Admin users can POST review replies."""
     # Note: This will fail with 404 since review doesn't exist, but auth should pass
-    response = client_admin.post(
-        "/api/v1/reviews/TEST123/reply", json={"text": "Thank you!"}
-    )
+    response = client_admin.post("/api/v1/reviews/TEST123/reply", json={"text": "Thank you!"})
     # Should NOT be 403 Forbidden - admin has permission
     # Will be 404 Not Found since review doesn't exist
     assert response.status_code in [200, 404], f"Got {response.status_code}: {response.json()}"
@@ -113,9 +111,7 @@ def test_admin_can_post_review_reply(client_admin):
 
 def test_viewer_cannot_post_review_reply(client_viewer):
     """Viewer users cannot POST review replies (403 Forbidden)."""
-    response = client_viewer.post(
-        "/api/v1/reviews/TEST123/reply", json={"text": "Thank you!"}
-    )
+    response = client_viewer.post("/api/v1/reviews/TEST123/reply", json={"text": "Thank you!"})
     # Viewer should get 403 Forbidden due to require_admin dependency
     assert response.status_code == 403
     assert "admin" in response.json()["detail"].lower()
