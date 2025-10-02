@@ -50,3 +50,8 @@ pytz==2023.3
 SQLAlchemy==2.0.36
 psycopg2-binary==2.9.10
 alembic==1.13.3
+
+# FastAPI web framework
+fastapi==0.115.0
+uvicorn[standard]==0.32.0
+pydantic==2.10.3
