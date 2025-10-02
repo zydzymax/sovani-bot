@@ -79,33 +79,41 @@ export default function Dashboard() {
     <div>
       <Header title="Dashboard" subtitle="Overview of your business metrics" />
 
-      {/* Date Range Picker */}
-      <div className="mb-6 flex gap-4">
+      {/* Date Range Picker & Export */}
+      <div className="mb-6 flex gap-4 items-end flex-wrap">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">From</label>
+          <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">From</label>
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white"
+            className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">To</label>
+          <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">To</label>
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white"
+            className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white"
           />
         </div>
-        <div className="flex items-end">
+        <div className="flex gap-2">
           <button
             onClick={loadDashboard}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white"
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white font-medium"
           >
             Refresh
           </button>
+          <a
+            href={`/api/v1/export/dashboard.csv?date_from=${dateFrom}&date_to=${dateTo}`}
+            download
+            className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white font-medium inline-block"
+            title="Export as CSV"
+          >
+            📥 CSV
+          </a>
         </div>
       </div>
 

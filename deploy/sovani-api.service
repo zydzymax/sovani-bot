@@ -1,0 +1,25 @@
+[Unit]
+Description=SoVAni FastAPI Backend
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/sovani_bot
+Environment="PATH=/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONPATH=/root/sovani_bot"
+EnvironmentFile=/root/sovani_bot/.env
+ExecStart=/usr/bin/python3 -m uvicorn app.web.main:app --host 0.0.0.0 --port 8080 --workers 2
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=sovani-api
+
+# Resource limits
+LimitNOFILE=65536
+MemoryLimit=1G
+CPUQuota=100%
+
+[Install]
+WantedBy=multi-user.target

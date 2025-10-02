@@ -62,35 +62,43 @@ export default function Inventory() {
         subtitle="Supply recommendations based on sales velocity"
       />
 
-      {/* Filters */}
-      <div className="mb-6 flex gap-4">
+      {/* Filters & Export */}
+      <div className="mb-6 flex gap-4 items-end flex-wrap">
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Date</label>
+          <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Date</label>
           <input
             type="date"
             value={adviceDate}
             onChange={(e) => setAdviceDate(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white"
+            className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white"
           />
         </div>
         <div>
-          <label className="block text-sm text-gray-400 mb-1">Planning Window</label>
+          <label className="block text-sm text-gray-600 dark:text-gray-400 mb-1">Planning Window</label>
           <select
             value={window}
             onChange={(e) => setWindow(Number(e.target.value) as 14 | 28)}
-            className="bg-gray-800 border border-gray-700 rounded px-3 py-2 text-white"
+            className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-gray-900 dark:text-white"
           >
             <option value={14}>14 days</option>
             <option value={28}>28 days</option>
           </select>
         </div>
-        <div className="flex items-end">
+        <div className="flex gap-2">
           <button
             onClick={loadAdvice}
-            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white"
+            className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-white font-medium"
           >
             Refresh
           </button>
+          <a
+            href={`/api/v1/export/advice.xlsx?date=${adviceDate}&window=${window}`}
+            download
+            className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded text-white font-medium inline-block"
+            title="Export as XLSX"
+          >
+            📥 XLSX
+          </a>
         </div>
       </div>
 
@@ -111,7 +119,7 @@ export default function Inventory() {
             header: 'Recommended',
             accessor: 'recommended_qty',
             render: (val) => (
-              <span className="font-bold text-green-400">{val}</span>
+              <span className="font-bold text-green-600 dark:text-green-400">{val}</span>
             ),
           },
           {
@@ -120,10 +128,10 @@ export default function Inventory() {
             render: (val) =>
               val ? (
                 <span
-                  className="text-xs text-gray-400 cursor-help"
+                  className="text-xs text-gray-600 dark:text-gray-400 cursor-help"
                   title={val}
                 >
-                  {val.length > 50 ? val.substring(0, 50) + '...' : val}
+                  ℹ️ {val.length > 40 ? val.substring(0, 40) + '...' : val}
                 </span>
               ) : (
                 '—'

@@ -22,6 +22,8 @@ def get_stocks(
     sku_id: int | None = Query(None, description="Filter by SKU ID"),
     warehouse_id: int | None = Query(None, description="Filter by warehouse ID"),
     limit: int = Query(100, ge=1, le=500, description="Max rows to return"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order by on_hand"),
 ) -> list[StockRow]:
     """Get inventory/stock data for specified date.
 
@@ -34,7 +36,13 @@ def get_stocks(
     if warehouse_id:
         stmt = stmt.where(DailyStock.warehouse_id == warehouse_id)
 
-    stmt = stmt.limit(limit)
+    # Apply ordering
+    if order == "desc":
+        stmt = stmt.order_by(DailyStock.on_hand.desc())
+    else:
+        stmt = stmt.order_by(DailyStock.on_hand.asc())
+
+    stmt = stmt.limit(limit).offset(offset)
 
     results = db.execute(stmt).scalars().all()
 

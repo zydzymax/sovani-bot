@@ -65,8 +65,10 @@ def get_top_sku(
     user: CurrentUser,
     date_from: date = Query(..., description="Start date"),
     date_to: date = Query(..., description="End date"),
-    metric: str = Query("revenue", description="Metric: revenue|profit|units"),
-    limit: int = Query(10, ge=1, le=100, description="Number of top SKUs"),
+    metric: str = Query("revenue", pattern="^(revenue|profit|units)$", description="Metric: revenue|profit|units"),
+    limit: int = Query(20, ge=1, le=100, description="Number of results per page"),
+    offset: int = Query(0, ge=0, description="Number of results to skip"),
+    order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order"),
 ) -> list[SkuMetric]:
     """Get top SKUs by specified metric.
 
@@ -75,43 +77,52 @@ def get_top_sku(
     - profit: Total profit
     - units: Total units sold
     """
+    # Determine order direction
+    order_func = func.sum
+
     if metric == "revenue":
         # Revenue from daily_sales
+        metric_col = func.sum(DailySales.revenue_gross)
         stmt = (
             select(
                 DailySales.sku_id,
-                func.sum(DailySales.revenue_gross).label("metric_value"),
+                metric_col.label("metric_value"),
                 func.sum(DailySales.qty).label("units"),
             )
             .where(DailySales.d.between(date_from, date_to))
             .group_by(DailySales.sku_id)
-            .order_by(func.sum(DailySales.revenue_gross).desc())
+            .order_by(metric_col.desc() if order == "desc" else metric_col.asc())
             .limit(limit)
+            .offset(offset)
         )
     elif metric == "profit":
         # Profit from metrics_daily
+        metric_col = func.sum(MetricsDaily.profit)
         stmt = (
             select(
                 MetricsDaily.sku_id,
-                func.sum(MetricsDaily.profit).label("metric_value"),
+                metric_col.label("metric_value"),
                 func.count().label("units"),  # Placeholder
             )
             .where(MetricsDaily.d.between(date_from, date_to))
             .group_by(MetricsDaily.sku_id)
-            .order_by(func.sum(MetricsDaily.profit).desc())
+            .order_by(metric_col.desc() if order == "desc" else metric_col.asc())
             .limit(limit)
+            .offset(offset)
         )
     else:  # units
+        metric_col = func.sum(DailySales.qty)
         stmt = (
             select(
                 DailySales.sku_id,
-                func.sum(DailySales.qty).label("metric_value"),
-                func.sum(DailySales.qty).label("units"),
+                metric_col.label("metric_value"),
+                metric_col.label("units"),
             )
             .where(DailySales.d.between(date_from, date_to))
             .group_by(DailySales.sku_id)
-            .order_by(func.sum(DailySales.qty).desc())
+            .order_by(metric_col.desc() if order == "desc" else metric_col.asc())
             .limit(limit)
+            .offset(offset)
         )
 
     results = db.execute(stmt).all()

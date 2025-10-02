@@ -26,6 +26,8 @@ def get_advice(
     sku_id: int | None = Query(None, description="Filter by SKU ID"),
     warehouse_id: int | None = Query(None, description="Filter by warehouse ID"),
     limit: int = Query(100, ge=1, le=500, description="Max rows to return"),
+    offset: int = Query(0, ge=0, description="Offset for pagination"),
+    order: str = Query("desc", pattern="^(asc|desc)$", description="Sort order by recommended_qty"),
 ) -> list[AdviceRow]:
     """Get supply recommendations with explainability.
 
@@ -41,7 +43,13 @@ def get_advice(
     if warehouse_id:
         stmt = stmt.where(AdviceSupply.warehouse_id == warehouse_id)
 
-    stmt = stmt.limit(limit)
+    # Apply ordering
+    if order == "desc":
+        stmt = stmt.order_by(AdviceSupply.recommended_qty.desc())
+    else:
+        stmt = stmt.order_by(AdviceSupply.recommended_qty.asc())
+
+    stmt = stmt.limit(limit).offset(offset)
 
     results = db.execute(stmt).scalars().all()
 

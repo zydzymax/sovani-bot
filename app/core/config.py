@@ -90,10 +90,25 @@ class Settings(BaseSettings):
     http_backoff_base: float = Field(0.75, description="HTTP retry backoff base delay")
     http_backoff_max: float = Field(8.0, description="HTTP retry backoff max delay")
 
+    # === Web API & RBAC (Stage 10) ===
+    allowed_tg_user_ids: str = Field("", description="Comma-separated admin user IDs")
+    readonly_tg_user_ids: str = Field("", description="Comma-separated viewer user IDs")
+    tma_origin: str = Field("*", description="TMA origin for CORS")
+
     @property
     def effective_chatgpt_key(self) -> str | None:
         """Return ChatGPT API key with fallback to OpenAI key."""
         return self.chatgpt_api_key or self.openai_api_key
+
+    @property
+    def admin_user_ids(self) -> set[str]:
+        """Get set of admin user IDs."""
+        return set(self.allowed_tg_user_ids.split(",")) if self.allowed_tg_user_ids else set()
+
+    @property
+    def viewer_user_ids(self) -> set[str]:
+        """Get set of viewer user IDs."""
+        return set(self.readonly_tg_user_ids.split(",")) if self.readonly_tg_user_ids else set()
 
 
 @lru_cache

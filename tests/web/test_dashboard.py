@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from app.db.models import Base, DailySales, SKU
+from app.db.models import SKU, Base, DailySales
 from app.web.main import app
 
 

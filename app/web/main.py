@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.web.routers import advice, dashboard, inventory, reviews
+from app.web.routers import advice, dashboard, export, inventory, reviews
 
 # Create FastAPI app
 app = FastAPI(
@@ -28,6 +28,7 @@ app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboar
 app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["Reviews"])
 app.include_router(inventory.router, prefix="/api/v1/inventory", tags=["Inventory"])
 app.include_router(advice.router, prefix="/api/v1/advice", tags=["Advice"])
+app.include_router(export.router, prefix="/api/v1/export", tags=["Export"])
 
 
 @app.get("/")
