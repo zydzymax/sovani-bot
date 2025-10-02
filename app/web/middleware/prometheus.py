@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from typing import Callable
+from collections.abc import Callable
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -34,7 +34,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
             status = response.status_code
-        except Exception as e:
+        except Exception:
             # Track failed requests
             http_requests_total.labels(
                 method=method, endpoint=endpoint, status="500"
@@ -61,6 +61,7 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         Examples:
             /api/v1/reviews/REV123/reply -> /api/v1/reviews/{id}/reply
             /api/v1/advice?date=2025-01-15 -> /api/v1/advice
+
         """
         # Remove query parameters
         path = path.split("?")[0]

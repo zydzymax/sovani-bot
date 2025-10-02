@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from fastapi.testclient import TestClient
@@ -28,7 +28,7 @@ def test_db():
             sku_key="12345",
             rating=5,
             text="Great product!",
-            created_at_utc=datetime.now(timezone.utc),
+            created_at_utc=datetime.now(UTC),
             reply_status=None,
         )
     )
@@ -39,7 +39,7 @@ def test_db():
             sku_key="67890",
             rating=3,
             text="Average quality",
-            created_at_utc=datetime.now(timezone.utc),
+            created_at_utc=datetime.now(UTC),
             reply_status=None,
         )
     )
@@ -50,7 +50,7 @@ def test_db():
             sku_key="11111",
             rating=4,
             text="Good",
-            created_at_utc=datetime.now(timezone.utc),
+            created_at_utc=datetime.now(UTC),
             reply_status="sent",
             reply_text="Thank you!",
         )

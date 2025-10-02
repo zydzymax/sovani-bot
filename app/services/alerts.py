@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import Enum
 
 import psutil
@@ -53,7 +53,7 @@ class AlertService:
             logger.warning("Manager chat ID not configured, skipping alert")
             return
 
-        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        timestamp = datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S UTC")
 
         # Format alert message
         alert_text = f"{level.value}\n"

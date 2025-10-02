@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import time
 from contextlib import contextmanager
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
 from app.core.metrics import scheduler_job_duration_seconds, scheduler_jobs_total
@@ -31,7 +31,7 @@ def monitor_job(job_name: str, metadata: dict[str, Any] | None = None):
     """
     db = SessionLocal()
     start_time = time.time()
-    started_at = datetime.now(timezone.utc)
+    started_at = datetime.now(UTC)
 
     # Create job run record
     job_run = JobRun(
@@ -50,7 +50,7 @@ def monitor_job(job_name: str, metadata: dict[str, Any] | None = None):
         # Job succeeded
         duration = time.time() - start_time
         job_run.status = "success"
-        job_run.finished_at = datetime.now(timezone.utc)
+        job_run.finished_at = datetime.now(UTC)
         job_run.duration_seconds = duration
         db.commit()
 
@@ -62,7 +62,7 @@ def monitor_job(job_name: str, metadata: dict[str, Any] | None = None):
         # Job failed
         duration = time.time() - start_time
         job_run.status = "failed"
-        job_run.finished_at = datetime.now(timezone.utc)
+        job_run.finished_at = datetime.now(UTC)
         job_run.duration_seconds = duration
         job_run.error_message = str(e)[:500]  # Truncate to fit column
         db.commit()

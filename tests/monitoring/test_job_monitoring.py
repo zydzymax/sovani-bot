@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import create_engine
@@ -76,8 +76,8 @@ def test_get_job_status(test_db, monkeypatch):
     test_db.add(
         JobRun(
             job_name="job1",
-            started_at=datetime.now(timezone.utc),
-            finished_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
+            finished_at=datetime.now(UTC),
             status="success",
             duration_seconds=1.5,
         )
@@ -85,7 +85,7 @@ def test_get_job_status(test_db, monkeypatch):
     test_db.add(
         JobRun(
             job_name="job2",
-            started_at=datetime.now(timezone.utc),
+            started_at=datetime.now(UTC),
             status="running",
         )
     )
@@ -114,8 +114,8 @@ def test_get_job_statistics(test_db, monkeypatch):
         test_db.add(
             JobRun(
                 job_name="test_job",
-                started_at=datetime.now(timezone.utc),
-                finished_at=datetime.now(timezone.utc),
+                started_at=datetime.now(UTC),
+                finished_at=datetime.now(UTC),
                 status=status,
                 duration_seconds=2.0,
             )

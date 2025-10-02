@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import logging.handlers
 import os
+from datetime import UTC
 from pathlib import Path
 
 from app.core.config import get_settings
@@ -93,10 +94,10 @@ class JSONFormatter(logging.Formatter):
 
         """
         import json
-        from datetime import datetime, timezone
+        from datetime import datetime
 
         log_data = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "timestamp": datetime.now(UTC).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),

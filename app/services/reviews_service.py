@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import logging
 from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 
-from app.core.logging import get_logger
+from app.ai.replies import generate_custom_reply
+from app.core.metrics import reviews_processed_total
 from app.db.models import Review
-from app.domain.reviews.reply_policy import build_reply_prompt
+from app.domain.reviews.classifier import classify_review
+from app.domain.reviews.templates import choose_template, personalize_reply
 
-log = get_logger("sovani_bot.reviews")
+log = logging.getLogger(__name__)
 
 
 async def fetch_pending_reviews(db: Session, limit: int = 50) -> list[Review]:
@@ -34,8 +37,84 @@ async def fetch_pending_reviews(db: Session, limit: int = 50) -> list[Review]:
     return list(db.execute(stmt).scalars())
 
 
+async def build_reply_for_review(review_id: str, db: Session) -> str:
+    """Build reply for review using Answer Engine (Stage 12).
+
+    Steps:
+        1. Fetch Review from database
+        2. Classify review (typical vs atypical)
+        3. If typical → choose template and personalize
+           If atypical → generate custom AI reply
+        4. Return reply text (does not mark as sent)
+
+    Args:
+        review_id: Review identifier
+        db: Database session
+
+    Returns:
+        Generated reply text
+
+    Raises:
+        ValueError: If review not found
+
+    """
+    # 1. Fetch review
+    stmt = select(Review).where(Review.review_id == review_id)
+    review = db.execute(stmt).scalar_one_or_none()
+
+    if not review:
+        raise ValueError(f"Review not found: {review_id}")
+
+    # Extract review data
+    rating = review.rating
+    text = review.text or ""
+    has_media = review.has_media or False
+    # TODO: Extract name from customer profile if available
+    name = None  # For now, no name extraction
+
+    # 2. Classify review
+    classification = classify_review(rating=rating, text=text, has_media=has_media)
+
+    log.info(
+        f"Review classified: {review_id} → {classification} "
+        f"(rating={rating}, text_len={len(text)}, has_media={has_media})"
+    )
+
+    # 3. Generate reply based on classification
+    if classification in {"typical_positive", "typical_negative", "typical_neutral"}:
+        # Use template
+        template = choose_template(classification)
+        reply_text = personalize_reply(name=name, template=template)
+        reply_type = "template"
+
+        log.info(f"Using template for {review_id}: {classification}")
+
+    else:  # atypical
+        # Use AI
+        reply_text = await generate_custom_reply(
+            name=name,
+            rating=rating,
+            text=text,
+            has_media=has_media,
+        )
+        reply_type = "custom_ai"
+
+        log.info(f"Using AI for {review_id}: rating={rating}, text_len={len(text)}")
+
+    # Update metrics
+    marketplace = review.marketplace or "unknown"
+    reviews_processed_total.labels(
+        marketplace=marketplace,
+        status=reply_type,  # template or custom_ai
+    ).inc()
+
+    return reply_text
+
+
 async def generate_reply_for_review(review: Review) -> str:
-    """Generate AI reply for a review using existing ai_reply module.
+    """Generate AI reply for a review (legacy compatibility).
+
+    DEPRECATED: Use build_reply_for_review() instead.
 
     Args:
         review: Review object
@@ -44,30 +123,14 @@ async def generate_reply_for_review(review: Review) -> str:
         Generated reply text
 
     """
-    # Import legacy ai_reply module
+    # Fallback to new Answer Engine
+    from app.db.session import SessionLocal
+
+    db = SessionLocal()
     try:
-        import os
-        import sys
-
-        sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(__file__))))
-        from ai_reply import generate_review_reply
-
-        # Convert Review model to dict format expected by legacy module
-        review_dict = {
-            "text": review.text or "",
-            "rating": review.rating or 3,
-            "has_media": False,  # TODO: Add media detection
-            "platform": "WB" if "WB" in (review.marketplace or "").upper() else "OZON",
-            "sku": review.sku_key or "N/A",
-        }
-
-        return await generate_review_reply(review_dict)
-
-    except Exception as e:
-        log.error("ai_reply_failed", extra={"review_id": review.review_id, "error": str(e)})
-        # Fallback: use simple policy-based reply
-        prompt = build_reply_prompt(review.rating or 3, review.text or "")
-        return f"Спасибо за отзыв! {prompt[:100]}..."
+        return await build_reply_for_review(review.review_id, db)
+    finally:
+        db.close()
 
 
 async def mark_reply_sent(db: Session, review_id: str, reply_text: str) -> None:

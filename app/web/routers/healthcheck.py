@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import os
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import psutil
 from fastapi import APIRouter
 from sqlalchemy import text
 
 from app.db.session import SessionLocal
+
 # APP_START_TIME will be passed as parameter or imported at runtime
 
 router = APIRouter()
@@ -29,6 +30,7 @@ def healthz():
     Returns:
         200 OK if all checks pass
         503 Service Unavailable if any check fails
+
     """
     status = "healthy"
     checks = {}
@@ -97,7 +99,7 @@ def healthz():
 
     # 4. Uptime (read from /proc/uptime on Linux)
     try:
-        with open("/proc/uptime", "r") as f:
+        with open("/proc/uptime") as f:
             uptime_seconds = float(f.readline().split()[0])
     except Exception:
         # Fallback: use process uptime
@@ -109,7 +111,7 @@ def healthz():
     }
 
     # 5. Current time
-    checks["timestamp"] = datetime.now(timezone.utc).isoformat()
+    checks["timestamp"] = datetime.now(UTC).isoformat()
 
     response = {
         "status": status,

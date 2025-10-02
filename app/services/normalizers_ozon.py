@@ -8,7 +8,7 @@ All dates converted to UTC.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 def norm_transactions(resp: dict) -> list[dict]:
@@ -93,7 +93,7 @@ def norm_stocks(resp: dict) -> list[dict]:
     - on_hand (int), in_transit (int)
     """
     out = []
-    snapshot_date = datetime.now(timezone.utc).date()
+    snapshot_date = datetime.now(UTC).date()
 
     rows = resp.get("result", {}).get("rows", [])
 

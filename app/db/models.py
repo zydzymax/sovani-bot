@@ -211,6 +211,7 @@ class Review(Base):
         String(20), nullable=True
     )  # "pending" | "sent" | "failed"
     reply_id: Mapped[str | None] = mapped_column(String(64), nullable=True)  # ID ответа (если есть)
+    reply_text: Mapped[str | None] = mapped_column(String, nullable=True)  # Текст ответа
     replied_at_utc: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=False), nullable=True
     )  # Дата ответа (UTC)
@@ -340,12 +341,10 @@ class JobRun(Base):
     )  # e.g., "sync_wb_orders", "check_reviews"
     started_at: Mapped[datetime] = mapped_column(DateTime, index=True)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
-    status: Mapped[str] = mapped_column(
-        String(20), index=True
-    )  # "success", "failed", "running"
+    status: Mapped[str] = mapped_column(String(20), index=True)  # "success", "failed", "running"
     duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
     error_message: Mapped[str | None] = mapped_column(String(500), nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(
+    job_metadata: Mapped[dict | None] = mapped_column(
         JSON, nullable=True
     )  # Extra context (e.g., records processed)
 

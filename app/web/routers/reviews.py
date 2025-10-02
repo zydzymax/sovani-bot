@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, update
 
 from app.db.models import Review
+from app.services.reviews_service import build_reply_for_review
 from app.web.deps import CurrentUser, DBSession, require_admin
 from app.web.schemas import ReplyRequest, ReviewDTO
 
@@ -63,7 +64,7 @@ def get_reviews(
         ReviewDTO(
             review_id=r.review_id,
             marketplace=r.marketplace,
-            sku_key=r.sku_key,
+            sku_key=str(r.sku_id) if r.sku_id else None,
             rating=r.rating,
             text=r.text,
             created_at_utc=r.created_at_utc.isoformat() if r.created_at_utc else None,
@@ -72,6 +73,50 @@ def get_reviews(
         )
         for r in results
     ]
+
+
+@router.post("/{review_id}/draft")
+async def generate_reply_draft(
+    review_id: str,
+    db: DBSession,
+    user: CurrentUser,
+) -> dict:
+    """Generate reply draft using Answer Engine (Stage 12).
+
+    Returns generated reply text WITHOUT marking review as sent.
+    Uses classification (typical/atypical) and templates/AI accordingly.
+
+    Args:
+        review_id: Review identifier
+        db: Database session
+        user: Current user (authenticated)
+
+    Returns:
+        Dict with review_id, draft_text, classification
+
+    """
+    try:
+        # Generate reply using Answer Engine
+        draft_text = await build_reply_for_review(review_id, db)
+
+        # Get review for classification info
+        stmt = select(Review).where(Review.review_id == review_id)
+        review = db.execute(stmt).scalar_one_or_none()
+
+        if not review:
+            raise HTTPException(status_code=404, detail="Review not found")
+
+        return {
+            "review_id": review_id,
+            "draft_text": draft_text,
+            "rating": review.rating,
+            "has_media": review.has_media or False,
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate draft: {e!s}")
 
 
 @router.post("/{review_id}/reply")
