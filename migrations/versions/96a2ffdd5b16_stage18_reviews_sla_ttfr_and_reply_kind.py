@@ -39,8 +39,7 @@ def upgrade() -> None:
     # Future replies will be tracked accurately
 
     # Create vw_reviews_sla view
-    # PostgreSQL-first design: Use EXTRACT(EPOCH FROM ...) for timestamp diff
-    # This works in both PostgreSQL and SQLite 3.38+
+    # SQLite-compatible design: Use julianday() for timestamp diff
     op.execute(
         """
         CREATE VIEW vw_reviews_sla AS
@@ -53,10 +52,10 @@ def upgrade() -> None:
             r.rating,
             (COALESCE(length(NULLIF(r.text, '')), 0) >= 40 OR r.has_media = 1) AS ai_needed,
             r.first_reply_at_utc,
-            CAST((EXTRACT(EPOCH FROM r.first_reply_at_utc) - EXTRACT(EPOCH FROM r.created_at_utc)) / 60.0 AS REAL) AS ttfr_minutes,
+            CAST((julianday(r.first_reply_at_utc) - julianday(r.created_at_utc)) * 24 * 60 AS REAL) AS ttfr_minutes,
             CASE
                 WHEN r.first_reply_at_utc IS NOT NULL
-                    AND (EXTRACT(EPOCH FROM r.first_reply_at_utc) - EXTRACT(EPOCH FROM r.created_at_utc)) / 3600.0 <= 24  -- SLA_FIRST_REPLY_HOURS
+                    AND (julianday(r.first_reply_at_utc) - julianday(r.created_at_utc)) * 24 <= 24  -- SLA_FIRST_REPLY_HOURS
                 THEN 1
                 ELSE 0
             END AS within_sla,

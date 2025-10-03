@@ -53,6 +53,13 @@ jobs:
           fi
         continue-on-error: true
 
+      - name: Apply Alembic migrations (test DB)
+        env:
+          DATABASE_URL: "sqlite:///./test_ci.db"
+        run: |
+          alembic upgrade head
+        continue-on-error: false
+
       - name: Run tests with pytest
         env:
           DATABASE_URL: "sqlite:///./test_ci.db"

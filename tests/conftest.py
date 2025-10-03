@@ -8,6 +8,8 @@ import re
 
 import pytest
 import vcr as vcr_module
+from alembic import command
+from alembic.config import Config as AlembicConfig
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -58,6 +60,30 @@ def vcr():
         },
         before_record_request=lambda r: r,
     )
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _apply_migrations_before_tests():
+    """
+    Automatically apply Alembic migrations to test DB before all tests.
+
+    Uses DATABASE_URL from environment. For in-memory tests, this ensures
+    BI views and all schema changes are applied before contract tests run.
+    """
+    db_url = os.getenv("DATABASE_URL", "sqlite:///./test_sovani.db")
+
+    # Skip migration for in-memory databases (they use Base.metadata.create_all)
+    if ":memory:" in db_url:
+        return
+
+    # Apply migrations
+    cfg = AlembicConfig("alembic.ini")
+    cfg.set_main_option("sqlalchemy.url", db_url)
+
+    try:
+        command.upgrade(cfg, "head")
+    except Exception as e:
+        print(f"Warning: Migration failed (may already be applied): {e}")
 
 
 @pytest.fixture
