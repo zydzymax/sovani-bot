@@ -9,7 +9,7 @@ All jobs are idempotent and can be run multiple times safely.
 
 from __future__ import annotations
 
-from datetime import UTC, date, timedelta
+from datetime import timezone, date, timedelta
 
 from app.core.config import get_settings
 from app.core.logging import get_logger
@@ -206,7 +206,7 @@ def reviews_sla_monitor() -> dict[str, int]:
 
     with SessionLocal() as db:
         # Find overdue reviews
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         overdue = find_overdue_reviews(
             db,
             now=now,

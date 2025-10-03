@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -157,7 +157,7 @@ async def mark_reply_sent(db: Session, review_id: str, reply_text: str) -> None:
         .values(
             reply_status="sent",
             reply_id="local",
-            replied_at_utc=datetime.now(UTC),
+            replied_at_utc=datetime.now(timezone.utc),
             reply_text=reply_text,
         )
     )

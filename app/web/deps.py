@@ -12,7 +12,7 @@ from app.core.config import get_settings
 from app.db.session import SessionLocal
 from app.web.auth import CurrentUser as CurrentUserModel
 from app.web.auth import get_current_user as get_auth_user
-from app.web.auth import validate_init_data
+from app.web.auth import validate_telegram_init_data
 
 
 def get_db() -> Session:
@@ -50,7 +50,7 @@ def current_user(x_telegram_init_data: Annotated[str | None, Header()] = None) -
 
     # Validate signature
     try:
-        data = validate_init_data(x_telegram_init_data)
+        data = validate_telegram_init_data(x_telegram_init_data, settings.telegram_token)
     except ValueError as e:
         raise HTTPException(status_code=401, detail=f"Invalid initData: {e}") from e
 

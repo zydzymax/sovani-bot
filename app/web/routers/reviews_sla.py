@@ -5,14 +5,14 @@ from __future__ import annotations
 import csv
 import io
 import logging
-from datetime import UTC, date, datetime, timedelta
+from datetime import timezone, date, datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.core.database import get_db
+from app.web.deps import get_db
 from app.db.utils import exec_scoped
 from app.ops.escalation import notify_overdue_reviews
 from app.services.reviews_sla import compute_review_sla, find_overdue_reviews
@@ -52,8 +52,8 @@ def get_sla_summary(
         date_from = date_to - timedelta(days=6)
 
     # Convert to datetime for query
-    d_from_dt = datetime.combine(date_from, datetime.min.time()).replace(tzinfo=UTC)
-    d_to_dt = datetime.combine(date_to, datetime.max.time()).replace(tzinfo=UTC)
+    d_from_dt = datetime.combine(date_from, datetime.min.time()).replace(tzinfo=timezone.utc)
+    d_to_dt = datetime.combine(date_to, datetime.max.time()).replace(tzinfo=timezone.utc)
 
     summary = compute_review_sla(
         db, org_id=org_id, d_from=d_from_dt, d_to=d_to_dt, marketplace=marketplace, sku_id=sku_id
@@ -93,7 +93,7 @@ def get_sla_backlog(
     settings = get_settings()
 
     escalate_hours = escalate_after_hours or settings.sla_escalate_after_hours
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
 
     overdue = find_overdue_reviews(
         db,
@@ -127,7 +127,7 @@ def trigger_escalation(
     """
     settings = get_settings()
 
-    now = datetime.now(UTC)
+    now = datetime.now(timezone.utc)
     overdue = find_overdue_reviews(
         db,
         org_id=org_id,
@@ -194,8 +194,8 @@ def export_sla_csv(
     where_clauses = ["org_id = :org_id", "created_at_utc BETWEEN :d_from AND :d_to"]
     params = {
         "org_id": org_id,
-        "d_from": datetime.combine(date_from, datetime.min.time()).replace(tzinfo=UTC),
-        "d_to": datetime.combine(date_to, datetime.max.time()).replace(tzinfo=UTC),
+        "d_from": datetime.combine(date_from, datetime.min.time()).replace(tzinfo=timezone.utc),
+        "d_to": datetime.combine(date_to, datetime.max.time()).replace(tzinfo=timezone.utc),
     }
 
     if marketplace:

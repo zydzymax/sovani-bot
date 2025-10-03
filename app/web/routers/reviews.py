@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import timezone, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, update
@@ -156,7 +156,7 @@ def post_review_reply(
         reply_kind = "template"
 
     # Update review
-    now_utc = datetime.now(UTC)
+    now_utc = datetime.now(timezone.utc)
     db.execute(
         update(Review)
         .where(Review.review_id == review_id)

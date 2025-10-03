@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.core.database import get_db
+from app.web.deps import get_db
 from app.ops.detectors import run_all_detectors
 from app.ops.remediation import trigger_remediation
 from app.ops.slo import calculate_slo_compliance, get_slo_summary_last_n_days

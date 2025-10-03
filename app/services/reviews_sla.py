@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import UTC, datetime, timedelta
+from datetime import timezone, datetime, timedelta
 from typing import Any
 
 from sqlalchemy.orm import Session
@@ -43,7 +43,7 @@ def update_first_reply_timestamp(
 
     """
     if when is None:
-        when = datetime.now(UTC)
+        when = datetime.now(timezone.utc)
 
     # Idempotent update - only set if NULL (scoped to org)
     query = """
