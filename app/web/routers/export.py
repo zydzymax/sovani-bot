@@ -5,10 +5,12 @@ from __future__ import annotations
 from datetime import date
 
 from fastapi import APIRouter, Query, Response
-from sqlalchemy import select, text
+from sqlalchemy import select
 
+from app.core.limits import check_export_limit
 from app.db.models import SKU, AdviceSupply, DailyStock, MetricsDaily, Warehouse
-from app.web.deps import CurrentUser, DBSession
+from app.db.utils import exec_scoped
+from app.web.deps import CurrentUser, DBSession, OrgScope
 from app.web.utils import to_csv, to_xlsx
 
 router = APIRouter()
@@ -16,30 +18,33 @@ router = APIRouter()
 
 @router.get("/dashboard.csv")
 def export_dashboard_csv(
+    org_id: OrgScope,
     db: DBSession,
     user: CurrentUser,
     date_from: date = Query(..., description="Start date (YYYY-MM-DD)"),
     date_to: date = Query(..., description="End date (YYYY-MM-DD)"),
+    limit: int = Query(5000, le=100000),
 ) -> Response:
     """Export dashboard summary as CSV.
 
     Returns daily breakdown of revenue, profit, units, refunds.
     """
-    # Query daily metrics
-    query = text(
-        """
+    check_export_limit(db, org_id, limit)
+
+    # Query daily metrics (scoped to org)
+    query = """
         SELECT
             d AS date,
             COALESCE(SUM(revenue_gross - refunds_amount - promo_cost - delivery_cost - commission_amount), 0) AS revenue_net,
             COALESCE(SUM(qty), 0) AS units,
             COALESCE(SUM(refunds_qty), 0) AS refunds_qty
         FROM daily_sales
-        WHERE d BETWEEN :d1 AND :d2
+        WHERE org_id = :org_id AND d BETWEEN :d1 AND :d2
         GROUP BY d
         ORDER BY d DESC
-        """
-    )
-    result = db.execute(query, {"d1": date_from, "d2": date_to}).all()
+        LIMIT :lim
+    """
+    result = exec_scoped(db, query, {"d1": date_from, "d2": date_to, "lim": limit}, org_id).all()
 
     # Convert to list of dicts
     data = [
@@ -64,6 +69,7 @@ def export_dashboard_csv(
 
 @router.get("/advice.xlsx")
 def export_advice_xlsx(
+    org_id: OrgScope,
     db: DBSession,
     user: CurrentUser,
     advice_date: date = Query(
@@ -72,12 +78,15 @@ def export_advice_xlsx(
     window: int | None = Query(None, description="Planning window: 14 or 28 days"),
     sku_id: int | None = Query(None, description="Filter by SKU ID"),
     warehouse_id: int | None = Query(None, description="Filter by warehouse ID"),
+    limit: int = Query(5000, le=100000),
 ) -> Response:
     """Export supply advice as XLSX.
 
     Returns recommended order quantities with metrics.
     """
-    stmt = select(AdviceSupply).where(AdviceSupply.d == advice_date)
+    check_export_limit(db, org_id, limit)
+
+    stmt = select(AdviceSupply).where(AdviceSupply.d == advice_date, AdviceSupply.org_id == org_id)
 
     if window:
         stmt = stmt.where(AdviceSupply.window_days == window)
@@ -86,27 +95,34 @@ def export_advice_xlsx(
     if warehouse_id:
         stmt = stmt.where(AdviceSupply.warehouse_id == warehouse_id)
 
-    stmt = stmt.order_by(AdviceSupply.recommended_qty.desc())
+    stmt = stmt.order_by(AdviceSupply.recommended_qty.desc()).limit(limit)
 
     results = db.execute(stmt).scalars().all()
 
-    # Enrich with SKU, warehouse, metrics
+    # Enrich with SKU, warehouse, metrics (scoped to org)
     data = []
     for row in results:
-        sku = db.get(SKU, row.sku_id)
-        warehouse = db.get(Warehouse, row.warehouse_id)
+        sku = db.execute(
+            select(SKU).where(SKU.id == row.sku_id, SKU.org_id == org_id)
+        ).scalar_one_or_none()
+        warehouse = db.execute(
+            select(Warehouse).where(Warehouse.id == row.warehouse_id, Warehouse.org_id == org_id)
+        ).scalar_one_or_none()
 
-        # Get metrics
+        # Get metrics (scoped to org)
         metrics_stmt = select(MetricsDaily).where(
-            MetricsDaily.d == advice_date, MetricsDaily.sku_id == row.sku_id
+            MetricsDaily.d == advice_date,
+            MetricsDaily.sku_id == row.sku_id,
+            MetricsDaily.org_id == org_id,
         )
         metrics = db.execute(metrics_stmt).scalar_one_or_none()
 
-        # Get stock
+        # Get stock (scoped to org)
         stock_stmt = select(DailyStock).where(
             DailyStock.d == advice_date,
             DailyStock.sku_id == row.sku_id,
             DailyStock.warehouse_id == row.warehouse_id,
+            DailyStock.org_id == org_id,
         )
         stock = db.execute(stock_stmt).scalar_one_or_none()
 
@@ -150,12 +166,14 @@ def export_advice_xlsx(
 
 @router.get("/reviews.csv")
 def export_reviews_csv(
+    org_id: OrgScope,
     db: DBSession,
     user: CurrentUser,
     status: str | None = Query(None, description="Filter by reply_status: pending|sent"),
     marketplace: str | None = Query(
         None, pattern="^(WB|OZON)$", description="Filter by marketplace"
     ),
+    limit: int = Query(5000, le=100000),
 ) -> Response:
     """Export reviews as CSV.
 
@@ -163,7 +181,9 @@ def export_reviews_csv(
     """
     from app.db.models import Review
 
-    stmt = select(Review).order_by(Review.created_at_utc.desc())
+    check_export_limit(db, org_id, limit)
+
+    stmt = select(Review).where(Review.org_id == org_id).order_by(Review.created_at_utc.desc())
 
     if status == "pending":
         stmt = stmt.where(Review.reply_status.is_(None))
@@ -173,6 +193,7 @@ def export_reviews_csv(
     if marketplace:
         stmt = stmt.where(Review.marketplace == marketplace)
 
+    stmt = stmt.limit(limit)
     results = db.execute(stmt).scalars().all()
 
     data = [

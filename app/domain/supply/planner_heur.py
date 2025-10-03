@@ -103,7 +103,11 @@ def plan_heuristic(candidates: list[PlanningCandidate]) -> list[SupplyPlan]:
         cost = qty_to_order * cand["unit_cost"]
         if budget_limit > 0 and budget_used + cost > budget_limit:
             # Reduce quantity to fit budget
-            affordable_qty = int((budget_limit - budget_used) / cand["unit_cost"]) if cand["unit_cost"] > 0 else 0
+            affordable_qty = (
+                int((budget_limit - budget_used) / cand["unit_cost"])
+                if cand["unit_cost"] > 0
+                else 0
+            )
             qty_to_order = min(qty_to_order, affordable_qty)
 
             # Round down to multiplicity

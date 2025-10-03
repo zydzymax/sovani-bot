@@ -36,21 +36,15 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             status = response.status_code
         except Exception:
             # Track failed requests
-            http_requests_total.labels(
-                method=method, endpoint=endpoint, status="500"
-            ).inc()
+            http_requests_total.labels(method=method, endpoint=endpoint, status="500").inc()
             http_requests_in_progress.labels(method=method, endpoint=endpoint).dec()
             raise
         finally:
             duration = time.time() - start_time
-            http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(
-                duration
-            )
+            http_request_duration_seconds.labels(method=method, endpoint=endpoint).observe(duration)
 
         # Track completed requests
-        http_requests_total.labels(
-            method=method, endpoint=endpoint, status=str(status)
-        ).inc()
+        http_requests_total.labels(method=method, endpoint=endpoint, status=str(status)).inc()
         http_requests_in_progress.labels(method=method, endpoint=endpoint).dec()
 
         return response

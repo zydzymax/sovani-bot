@@ -9,7 +9,7 @@ from sqlalchemy import select
 
 from app.db.models import SKU, AdviceSupply, DailyStock, MetricsDaily, Warehouse
 from app.services.recalc_metrics import build_advice_explanation
-from app.web.deps import CurrentUser, DBSession
+from app.web.deps import CurrentUser, DBSession, OrgScope
 from app.web.schemas import AdviceRow
 
 router = APIRouter()
@@ -17,6 +17,7 @@ router = APIRouter()
 
 @router.get("", response_model=list[AdviceRow])
 def get_advice(
+    org_id: OrgScope,
     db: DBSession,
     user: CurrentUser,
     advice_date: date = Query(

@@ -5,10 +5,11 @@ from __future__ import annotations
 from datetime import date
 
 from fastapi import APIRouter, Query
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 
 from app.db.models import SKU, DailySales, MetricsDaily
-from app.web.deps import CurrentUser, DBSession
+from app.db.utils import exec_scoped
+from app.web.deps import CurrentUser, DBSession, OrgScope
 from app.web.schemas import DashboardSummary, SkuMetric
 
 router = APIRouter()
@@ -16,6 +17,7 @@ router = APIRouter()
 
 @router.get("/summary", response_model=DashboardSummary)
 def get_dashboard_summary(
+    org_id: OrgScope,
     db: DBSession,
     user: CurrentUser,
     date_from: date = Query(..., description="Start date (YYYY-MM-DD)"),
@@ -25,30 +27,26 @@ def get_dashboard_summary(
 
     Returns aggregated revenue, profit, margin, units sold, and refunds.
     """
-    # Use raw SQL for performance
-    query = text(
-        """
+    # Use raw SQL for performance - scoped to org
+    query = """
         SELECT
             COALESCE(SUM(revenue_gross - refunds_amount - promo_cost - delivery_cost - commission_amount), 0) AS revenue_net,
             COALESCE(SUM(qty), 0) AS units,
             COALESCE(SUM(refunds_qty), 0) AS refunds_qty
         FROM daily_sales
-        WHERE d BETWEEN :d1 AND :d2
+        WHERE org_id = :org_id AND d BETWEEN :d1 AND :d2
         """
-    )
-    result = db.execute(query, {"d1": date_from, "d2": date_to}).one()
+    result = exec_scoped(db, query, {"d1": date_from, "d2": date_to}, org_id).one()
 
     # Get profit and margin from metrics (if available)
-    metrics_query = text(
-        """
+    metrics_query = """
         SELECT
             COALESCE(SUM(profit), 0) AS profit,
             COALESCE(AVG(margin), 0) AS margin
         FROM metrics_daily
-        WHERE d BETWEEN :d1 AND :d2
+        WHERE org_id = :org_id AND d BETWEEN :d1 AND :d2
         """
-    )
-    metrics_result = db.execute(metrics_query, {"d1": date_from, "d2": date_to}).one()
+    metrics_result = exec_scoped(db, metrics_query, {"d1": date_from, "d2": date_to}, org_id).one()
 
     return DashboardSummary(
         revenue_net=float(result.revenue_net),
@@ -61,6 +59,7 @@ def get_dashboard_summary(
 
 @router.get("/top-sku", response_model=list[SkuMetric])
 def get_top_sku(
+    org_id: OrgScope,
     db: DBSession,
     user: CurrentUser,
     date_from: date = Query(..., description="Start date"),
@@ -83,7 +82,7 @@ def get_top_sku(
     order_func = func.sum
 
     if metric == "revenue":
-        # Revenue from daily_sales
+        # Revenue from daily_sales - scoped to org
         metric_col = func.sum(DailySales.revenue_gross)
         stmt = (
             select(
@@ -91,14 +90,14 @@ def get_top_sku(
                 metric_col.label("metric_value"),
                 func.sum(DailySales.qty).label("units"),
             )
-            .where(DailySales.d.between(date_from, date_to))
+            .where(DailySales.org_id == org_id, DailySales.d.between(date_from, date_to))
             .group_by(DailySales.sku_id)
             .order_by(metric_col.desc() if order == "desc" else metric_col.asc())
             .limit(limit)
             .offset(offset)
         )
     elif metric == "profit":
-        # Profit from metrics_daily
+        # Profit from metrics_daily - scoped to org
         metric_col = func.sum(MetricsDaily.profit)
         stmt = (
             select(
@@ -106,7 +105,7 @@ def get_top_sku(
                 metric_col.label("metric_value"),
                 func.count().label("units"),  # Placeholder
             )
-            .where(MetricsDaily.d.between(date_from, date_to))
+            .where(MetricsDaily.org_id == org_id, MetricsDaily.d.between(date_from, date_to))
             .group_by(MetricsDaily.sku_id)
             .order_by(metric_col.desc() if order == "desc" else metric_col.asc())
             .limit(limit)
@@ -120,7 +119,7 @@ def get_top_sku(
                 metric_col.label("metric_value"),
                 metric_col.label("units"),
             )
-            .where(DailySales.d.between(date_from, date_to))
+            .where(DailySales.org_id == org_id, DailySales.d.between(date_from, date_to))
             .group_by(DailySales.sku_id)
             .order_by(metric_col.desc() if order == "desc" else metric_col.asc())
             .limit(limit)
@@ -129,10 +128,12 @@ def get_top_sku(
 
     results = db.execute(stmt).all()
 
-    # Enrich with SKU data
+    # Enrich with SKU data (scoped to org)
     output = []
     for row in results:
-        sku = db.get(SKU, row.sku_id)
+        sku = db.execute(
+            select(SKU).where(SKU.id == row.sku_id, SKU.org_id == org_id)
+        ).scalar_one_or_none()
         output.append(
             SkuMetric(
                 sku_id=row.sku_id,

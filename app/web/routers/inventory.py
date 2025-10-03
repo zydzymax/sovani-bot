@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query
 from sqlalchemy import select
 
 from app.db.models import SKU, DailyStock, Warehouse
-from app.web.deps import CurrentUser, DBSession
+from app.web.deps import CurrentUser, DBSession, OrgScope
 from app.web.schemas import StockRow
 
 router = APIRouter()
@@ -16,6 +16,7 @@ router = APIRouter()
 
 @router.get("/stocks", response_model=list[StockRow])
 def get_stocks(
+    org_id: OrgScope,
     db: DBSession,
     user: CurrentUser,
     stock_date: date = Query(..., alias="date", description="Date for stock snapshot (YYYY-MM-DD)"),

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -17,11 +17,12 @@ from app.domain.reviews.templates import choose_template, personalize_reply
 log = logging.getLogger(__name__)
 
 
-async def fetch_pending_reviews(db: Session, limit: int = 50) -> list[Review]:
+async def fetch_pending_reviews(db: Session, *, org_id: int, limit: int = 50) -> list[Review]:
     """Fetch reviews without replies (reply_status IS NULL).
 
     Args:
         db: Database session
+        org_id: Organization ID for scoping
         limit: Maximum number of reviews to fetch
 
     Returns:
@@ -30,6 +31,7 @@ async def fetch_pending_reviews(db: Session, limit: int = 50) -> list[Review]:
     """
     stmt = (
         select(Review)
+        .where(Review.org_id == org_id)
         .where(Review.reply_status.is_(None))
         .order_by(Review.created_at_utc.desc())
         .limit(limit)
@@ -37,7 +39,7 @@ async def fetch_pending_reviews(db: Session, limit: int = 50) -> list[Review]:
     return list(db.execute(stmt).scalars())
 
 
-async def build_reply_for_review(review_id: str, db: Session) -> str:
+async def build_reply_for_review(db: Session, *, org_id: int, review_id: str) -> str:
     """Build reply for review using Answer Engine (Stage 12).
 
     Steps:
@@ -48,8 +50,9 @@ async def build_reply_for_review(review_id: str, db: Session) -> str:
         4. Return reply text (does not mark as sent)
 
     Args:
-        review_id: Review identifier
         db: Database session
+        org_id: Organization ID for scoping
+        review_id: Review identifier
 
     Returns:
         Generated reply text
@@ -58,8 +61,8 @@ async def build_reply_for_review(review_id: str, db: Session) -> str:
         ValueError: If review not found
 
     """
-    # 1. Fetch review
-    stmt = select(Review).where(Review.review_id == review_id)
+    # 1. Fetch review (scoped to org)
+    stmt = select(Review).where(Review.review_id == review_id, Review.org_id == org_id)
     review = db.execute(stmt).scalar_one_or_none()
 
     if not review:
@@ -154,7 +157,7 @@ async def mark_reply_sent(db: Session, review_id: str, reply_text: str) -> None:
         .values(
             reply_status="sent",
             reply_id="local",
-            replied_at_utc=datetime.now(timezone.utc),
+            replied_at_utc=datetime.now(UTC),
             reply_text=reply_text,
         )
     )

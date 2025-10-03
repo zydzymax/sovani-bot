@@ -9,12 +9,18 @@ All jobs are idempotent and can be run multiple times safely.
 
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import UTC, date, timedelta
 
+from app.core.config import get_settings
 from app.core.logging import get_logger
 from app.db.session import SessionLocal
+from app.ops.alerts import send_alert_with_dedup
+from app.ops.detectors import run_all_detectors
+from app.ops.escalation import notify_overdue_reviews
+from app.ops.remediation import trigger_remediation
 from app.services.ingestion import collect_wb_sales_stub
 from app.services.recalc_metrics import recalc_metrics_for_date
+from app.services.reviews_sla import find_overdue_reviews
 
 log = get_logger("sovani_bot.scheduler")
 
@@ -93,10 +99,72 @@ def recalc_recent_metrics(days: int = 35) -> dict[str, int]:
     return stats
 
 
+def ops_health_check() -> dict[str, int]:
+    """Run operational health checks and send alerts (Stage 17).
+
+    This job should run frequently (e.g., every 5 minutes).
+
+    Returns:
+        Dict with detector stats (total, passed, failed, alerts_sent, remediations_triggered)
+
+    """
+    log.info("ops_health_check_started")
+
+    settings = get_settings()
+    stats = {"total": 0, "passed": 0, "failed": 0, "alerts_sent": 0, "remediations_triggered": 0}
+
+    with SessionLocal() as db:
+        # Run all detectors
+        results = run_all_detectors(db)
+        stats["total"] = len(results)
+
+        for result in results:
+            if result.get("ok"):
+                stats["passed"] += 1
+            else:
+                stats["failed"] += 1
+
+                # Send alert with deduplication
+                try:
+                    sent = send_alert_with_dedup(
+                        db,
+                        source=result.get("source", "unknown"),
+                        severity=result.get("severity", "warning"),
+                        message=result.get("msg", "No message"),
+                        fingerprint=result.get("fingerprint", "unknown"),
+                        extras=result.get("extras"),
+                    )
+                    if sent:
+                        stats["alerts_sent"] += 1
+                except Exception as e:
+                    log.error(
+                        "alert_send_failed",
+                        extra={"source": result.get("source"), "error": str(e)},
+                    )
+
+                # Trigger auto-remediation if enabled
+                if settings.auto_remediation_enabled:
+                    try:
+                        remediation_result = trigger_remediation(db, result)
+                        if remediation_result.get("status") not in ["disabled", "no_action"]:
+                            stats["remediations_triggered"] += 1
+                    except Exception as e:
+                        log.error(
+                            "remediation_failed",
+                            extra={"source": result.get("source"), "error": str(e)},
+                        )
+
+    log.info("ops_health_check_completed", extra={"stats": stats})
+
+    return stats
+
+
 # TODO Stage 8: Add scheduler integration
 # - APScheduler / Celery Beat
 # - Cron-like scheduling (nightly at 02:00 UTC)
 # - Error handling and alerting (Telegram notifications)
+#
+# Stage 17: ops_health_check should run every 5 minutes
 
 # Example APScheduler setup (for reference):
 #
@@ -118,3 +186,68 @@ def recalc_recent_metrics(days: int = 35) -> dict[str, int]:
 #     id='nightly_metrics'
 # )
 # scheduler.start()
+
+
+def reviews_sla_monitor() -> dict[str, int]:
+    """Monitor reviews SLA and send escalation notifications (Stage 18).
+
+    Runs every 30 minutes to check for overdue reviews.
+
+    Returns:
+        Dict with stats (overdue_count, messages_sent)
+
+    """
+    from datetime import datetime
+
+    log.info("reviews_sla_monitor_started")
+
+    settings = get_settings()
+    stats = {"overdue_count": 0, "messages_sent": 0}
+
+    with SessionLocal() as db:
+        # Find overdue reviews
+        now = datetime.now(UTC)
+        overdue = find_overdue_reviews(
+            db,
+            now=now,
+            escalate_after_hours=settings.sla_escalate_after_hours,
+            limit=settings.sla_backlog_limit,
+        )
+
+        stats["overdue_count"] = len(overdue)
+
+        if overdue:
+            # Parse chat IDs from config
+            chat_ids_str = settings.sla_notify_chat_ids.strip()
+            if chat_ids_str:
+                chat_ids = [int(cid.strip()) for cid in chat_ids_str.split(",") if cid.strip()]
+
+                # Send escalation notifications
+                messages_sent = notify_overdue_reviews(
+                    overdue,
+                    chat_ids,
+                    batch_size=settings.sla_batch_size,
+                )
+
+                stats["messages_sent"] = messages_sent
+
+                # Update Prometheus metrics
+                from app.core.metrics import reviews_escalation_sent_total, reviews_overdue_total
+
+                reviews_overdue_total.set(len(overdue))
+                reviews_escalation_sent_total.inc(messages_sent)
+            else:
+                log.warning("SLA_NOTIFY_CHAT_IDS not configured, skipping escalation")
+
+    log.info("reviews_sla_monitor_completed", extra={"stats": stats})
+
+    return stats
+
+
+# Example APScheduler configuration (for reference):
+# scheduler.add_job(
+#     reviews_sla_monitor,
+#     trigger='interval',
+#     minutes=30,  # Every 30 minutes
+#     id='reviews_sla_monitor'
+# )

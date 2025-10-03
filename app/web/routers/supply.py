@@ -8,10 +8,10 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.db.models import AdviceSupply, SKU, Warehouse
+from app.db.models import SKU, AdviceSupply, Warehouse
 from app.db.session import get_db
 from app.services.supply_planner import generate_supply_plan
-from app.web.deps import require_admin
+from app.web.deps import OrgScope, require_admin
 
 router = APIRouter(prefix="/api/v1/supply", tags=["supply"])
 
@@ -20,6 +20,7 @@ DBSession = Annotated[Session, Depends(get_db)]
 
 @router.get("/plan")
 async def get_supply_plan(
+    org_id: OrgScope,
     db: DBSession,
     window: int = Query(14, description="Planning window (14 or 28 days)"),
     marketplace: str | None = Query(None, description="Filter by marketplace"),
@@ -31,7 +32,7 @@ async def get_supply_plan(
 
     Returns list of supply recommendations with explanations.
     """
-    # Query AdviceSupply with joins
+    # Query AdviceSupply with joins (scoped to org)
     stmt = (
         select(
             AdviceSupply.sku_id,
@@ -46,7 +47,18 @@ async def get_supply_plan(
         )
         .join(SKU, AdviceSupply.sku_id == SKU.id)
         .join(Warehouse, AdviceSupply.warehouse_id == Warehouse.id)
-        .where(AdviceSupply.d == db.execute(select(AdviceSupply.d).order_by(AdviceSupply.d.desc()).limit(1)).scalar())
+        .where(
+            AdviceSupply.d
+            == db.execute(
+                select(AdviceSupply.d)
+                .where(AdviceSupply.org_id == org_id)
+                .order_by(AdviceSupply.d.desc())
+                .limit(1)
+            ).scalar()
+        )
+        .where(AdviceSupply.org_id == org_id)
+        .where(SKU.org_id == org_id)
+        .where(Warehouse.org_id == org_id)
     )
 
     if marketplace:
@@ -77,6 +89,7 @@ async def get_supply_plan(
 
 @router.post("/compute")
 async def compute_supply_plan(
+    org_id: OrgScope,
     db: DBSession,
     _admin: Annotated[dict, Depends(require_admin)],
     window: int = Query(14, description="Planning window (14 or 28 days)"),
@@ -91,8 +104,10 @@ async def compute_supply_plan(
     if window not in {14, 28}:
         return {"error": "Window must be 14 or 28 days"}, 400
 
-    # Generate plan
-    plans = generate_supply_plan(db, window, marketplace, warehouse_id)
+    # Generate plan (scoped to org)
+    plans = generate_supply_plan(
+        db, org_id=org_id, window=window, marketplace=marketplace, wh_id=warehouse_id
+    )
 
     return {
         "status": "success",

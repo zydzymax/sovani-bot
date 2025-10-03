@@ -79,7 +79,10 @@ reviews_processed_total = Counter(
 reviews_classified_total = Counter(
     "reviews_classified_total",
     "Total reviews classified by type",
-    ["marketplace", "classification"],  # classification: typical_positive, typical_negative, typical_neutral, atypical
+    [
+        "marketplace",
+        "classification",
+    ],  # classification: typical_positive, typical_negative, typical_neutral, atypical
 )
 
 advice_generated_total = Counter(
@@ -105,4 +108,97 @@ errors_total = Counter(
     "errors_total",
     "Total errors by type",
     ["error_type", "component"],
+)
+
+# === Stage 17: Operational Alerts & Playbooks ===
+
+# Alert metrics
+alerts_total = Counter(
+    "alerts_total",
+    "Total operational alerts sent",
+    ["source", "severity"],  # severity: warning, error, critical
+)
+
+alerts_deduplicated_total = Counter(
+    "alerts_deduplicated_total",
+    "Total alerts suppressed by deduplication",
+    ["source"],
+)
+
+# Auto-remediation metrics
+auto_remediation_total = Counter(
+    "auto_remediation_total",
+    "Total auto-remediation actions triggered",
+    ["action", "result"],  # result: success, failure, disabled, no_action
+)
+
+auto_remediation_duration_seconds = Summary(
+    "auto_remediation_duration_seconds",
+    "Auto-remediation action execution time",
+    ["action"],
+)
+
+# SLO violation metrics
+slo_violation_total = Counter(
+    "slo_violation_total",
+    "Total SLO violations detected",
+    ["target"],  # target: api_latency, ingest_success_rate, scheduler_on_time
+)
+
+# Detector metrics
+detector_checks_total = Counter(
+    "detector_checks_total",
+    "Total detector checks executed",
+    ["detector", "result"],  # result: pass, fail
+)
+
+detector_check_duration_seconds = Summary(
+    "detector_check_duration_seconds",
+    "Detector check execution time",
+    ["detector"],
+)
+
+# === Stage 18: Reviews SLA Metrics ===
+
+# TTFR (Time to First Reply) distribution
+reviews_ttfr_seconds = Histogram(
+    "reviews_ttfr_seconds",
+    "Time to first reply in seconds",
+    ["marketplace"],
+    buckets=[60, 300, 900, 1800, 3600, 7200, 14400, 28800, 57600, 86400, 172800],  # 1m to 48h
+)
+
+# SLA compliance
+reviews_sla_within_total = Counter(
+    "reviews_sla_within_total",
+    "Reviews replied within/outside SLA",
+    ["status"],  # status: ok (within SLA) | fail (outside SLA)
+)
+
+# Reply kind tracking
+reviews_answer_kind_total = Counter(
+    "reviews_answer_kind_total",
+    "Reviews by answer kind",
+    ["kind"],  # kind: template | ai
+)
+
+# Overdue reviews gauge
+reviews_overdue_total = Gauge(
+    "reviews_overdue_total",
+    "Number of overdue reviews without first reply",
+)
+
+# Escalation notifications
+reviews_escalation_sent_total = Counter(
+    "reviews_escalation_sent_total",
+    "Total escalation notifications sent",
+)
+
+# === Stage 19: Multi-Tenant Security Metrics ===
+
+# Tenant scoping violations
+tenant_unscoped_query_total = Counter(
+    "tenant_unscoped_query_total",
+    "Total queries attempted without proper org_id scoping",
+    ["error_type"],  # error_type: missing_org_id, missing_filter
 )

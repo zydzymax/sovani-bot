@@ -87,7 +87,7 @@ def build_price_demand_series(
         price = revenue / qty if qty > 0 else 0.0
 
         # Detect stockout: units=0 but on_hand was low
-        stockout = (qty == 0 and on_hand < 5)
+        stockout = qty == 0 and on_hand < 5
 
         # Simple promo detection: price drop >15% from recent average
         # (in real implementation, use promo_cost or explicit promo flag)
@@ -157,7 +157,9 @@ def estimate_price_elasticity(series: list[PriceDemandPoint]) -> ElasticityEstim
     mean_ln_price = sum(ln_prices) / len(ln_prices)
     mean_ln_units = sum(ln_units) / len(ln_units)
 
-    cov = sum((p - mean_ln_price) * (u - mean_ln_units) for p, u in zip(ln_prices, ln_units)) / len(valid_points)
+    cov = sum(
+        (p - mean_ln_price) * (u - mean_ln_units) for p, u in zip(ln_prices, ln_units, strict=False)
+    ) / len(valid_points)
     var_price = sum((p - mean_ln_price) ** 2 for p in ln_prices) / len(valid_points)
 
     if var_price < 0.01:

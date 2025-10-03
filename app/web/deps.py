@@ -5,11 +5,13 @@ from __future__ import annotations
 import json
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException
+from fastapi import Depends, Header, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
 from app.db.session import SessionLocal
+from app.web.auth import CurrentUser as CurrentUserModel
+from app.web.auth import get_current_user as get_auth_user
 from app.web.auth import validate_init_data
 
 
@@ -99,3 +101,85 @@ def require_admin(user: dict = Depends(current_user)) -> dict:
 # Type aliases for cleaner endpoints
 DBSession = Annotated[Session, Depends(get_db)]
 CurrentUser = Annotated[dict, Depends(current_user)]
+
+
+# === Stage 19: Multi-tenant org scoping ===
+
+
+def get_org_scope(user: CurrentUserModel = Depends(get_auth_user)) -> int:
+    """Get org_id for scoping queries (Stage 19).
+
+    Args:
+        user: Current authenticated user with org context
+
+    Returns:
+        Organization ID for filtering
+
+    Raises:
+        HTTPException: If user has no org scope
+
+    Usage:
+        >>> @router.get("/reviews")
+        >>> def get_reviews(org_id: int = Depends(get_org_scope)):
+        >>>     # org_id is guaranteed to be valid
+
+    """
+    if not user.org_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No organization scope. User must belong to an organization.",
+        )
+    return user.org_id
+
+
+def require_manager(user: CurrentUserModel = Depends(get_auth_user)) -> CurrentUserModel:
+    """Require manager or owner role (Stage 19).
+
+    Args:
+        user: Current authenticated user
+
+    Returns:
+        User if manager or owner
+
+    Raises:
+        HTTPException: If user is viewer
+
+    """
+    role_hierarchy = {"viewer": 0, "manager": 1, "owner": 2}
+    user_level = role_hierarchy.get(user.role, -1)
+
+    if user_level < role_hierarchy["manager"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Manager or owner role required",
+        )
+
+    return user
+
+
+def require_owner(user: CurrentUserModel = Depends(get_auth_user)) -> CurrentUserModel:
+    """Require owner role (Stage 19).
+
+    Args:
+        user: Current authenticated user
+
+    Returns:
+        User if owner
+
+    Raises:
+        HTTPException: If user is not owner
+
+    """
+    if user.role != "owner":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Owner role required",
+        )
+
+    return user
+
+
+# Type aliases for Stage 19
+OrgScope = Annotated[int, Depends(get_org_scope)]
+ManagerUser = Annotated[CurrentUserModel, Depends(require_manager)]
+OwnerUser = Annotated[CurrentUserModel, Depends(require_owner)]

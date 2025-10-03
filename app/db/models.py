@@ -349,3 +349,28 @@ class JobRun(Base):
     )  # Extra context (e.g., records processed)
 
     __table_args__ = (Index("ix_job_runs_name_started", "job_name", "started_at"),)
+
+
+class PricingAdvice(Base):
+    """Pricing and discount recommendations (Stage 14).
+
+    Stores price/discount recommendations with guardrails and explanations.
+    """
+
+    __tablename__ = "pricing_advice"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    d: Mapped[date] = mapped_column(Date, index=True)  # Date of advice
+    sku_id: Mapped[int] = mapped_column(ForeignKey("sku.id", ondelete="CASCADE"), index=True)
+
+    # Recommendations
+    suggested_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    suggested_discount_pct: Mapped[float | None] = mapped_column(Float, nullable=True)
+    expected_profit: Mapped[float | None] = mapped_column(Float, nullable=True)
+
+    # Quality and rationale
+    quality: Mapped[str | None] = mapped_column(String(10), nullable=True)  # "low" | "medium"
+    rationale_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)  # SHA256
+    reason_code: Mapped[str | None] = mapped_column(String(64), nullable=True)  # Action reason
+
+    __table_args__ = (UniqueConstraint("d", "sku_id", name="uq_pricing_advice_d_sku"),)

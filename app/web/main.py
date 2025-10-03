@@ -10,7 +10,21 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 
 from app.core.metrics import app_info, app_uptime_seconds
 from app.web.middleware import PrometheusMiddleware
-from app.web.routers import advice, dashboard, export, healthcheck, inventory, reviews, supply
+from app.web.routers import (
+    advice,
+    bi_export,
+    dashboard,
+    export,
+    finance,
+    healthcheck,
+    inventory,
+    ops,
+    orgs,
+    pricing,
+    reviews,
+    reviews_sla,
+    supply,
+)
 
 # Application start time for uptime calculation
 APP_START_TIME = time.time()
@@ -39,12 +53,18 @@ app_info.labels(version="0.11.0", environment="production").set(1)
 
 # Include routers
 app.include_router(healthcheck.router, tags=["Monitoring"])
+app.include_router(orgs.router, tags=["Organizations"])  # Stage 19: Multi-tenant
 app.include_router(dashboard.router, prefix="/api/v1/dashboard", tags=["Dashboard"])
 app.include_router(reviews.router, prefix="/api/v1/reviews", tags=["Reviews"])
 app.include_router(inventory.router, prefix="/api/v1/inventory", tags=["Inventory"])
 app.include_router(advice.router, prefix="/api/v1/advice", tags=["Advice"])
 app.include_router(supply.router, tags=["Supply"])
+app.include_router(pricing.router, tags=["Pricing"])
 app.include_router(export.router, prefix="/api/v1/export", tags=["Export"])
+app.include_router(bi_export.router, prefix="/api/v1/export", tags=["BI Export"])
+app.include_router(finance.router, tags=["Finance"])
+app.include_router(ops.router, tags=["Operations"])
+app.include_router(reviews_sla.router, tags=["Reviews SLA"])
 
 
 @app.get("/")

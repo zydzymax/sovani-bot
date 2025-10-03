@@ -11,7 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
-from app.db.models import CostPriceHistory, DailyStock, SKU, Warehouse
+from app.db.models import SKU, CostPriceHistory, DailyStock, Warehouse
 from app.domain.supply.demand import demand_stdev, rolling_sv
 
 
@@ -37,12 +37,13 @@ class PlanningCandidate(TypedDict):
     unit_cost: float
 
 
-def get_current_cost(db: Session, sku_id: int, as_of: date | None = None) -> float:
+def get_current_cost(db: Session, sku_id: int, org_id: int, as_of: date | None = None) -> float:
     """Get current cost price for SKU.
 
     Args:
         db: Database session
         sku_id: SKU ID
+        org_id: Organization ID for scoping
         as_of: Date to check cost (default: today)
 
     Returns:
@@ -52,10 +53,11 @@ def get_current_cost(db: Session, sku_id: int, as_of: date | None = None) -> flo
     if as_of is None:
         as_of = date.today()
 
-    # Get latest cost where dt_from <= as_of
+    # Get latest cost where dt_from <= as_of (scoped to org)
     stmt = (
         select(CostPriceHistory.cost_price)
         .where(CostPriceHistory.sku_id == sku_id)
+        .where(CostPriceHistory.org_id == org_id)
         .where(CostPriceHistory.dt_from <= as_of)
         .order_by(CostPriceHistory.dt_from.desc())
         .limit(1)
@@ -65,13 +67,14 @@ def get_current_cost(db: Session, sku_id: int, as_of: date | None = None) -> flo
     return result or 0.0
 
 
-def get_latest_stock(db: Session, sku_id: int, wh_id: int) -> tuple[int, int]:
+def get_latest_stock(db: Session, sku_id: int, wh_id: int, org_id: int) -> tuple[int, int]:
     """Get latest stock snapshot for SKU×warehouse.
 
     Args:
         db: Database session
         sku_id: SKU ID
         wh_id: Warehouse ID
+        org_id: Organization ID for scoping
 
     Returns:
         Tuple (on_hand, in_transit)
@@ -81,6 +84,7 @@ def get_latest_stock(db: Session, sku_id: int, wh_id: int) -> tuple[int, int]:
         select(DailyStock.on_hand, DailyStock.in_transit)
         .where(DailyStock.sku_id == sku_id)
         .where(DailyStock.warehouse_id == wh_id)
+        .where(DailyStock.org_id == org_id)
         .order_by(DailyStock.d.desc())
         .limit(1)
     )
@@ -118,6 +122,7 @@ def get_warehouse_capacity(marketplace: str, wh_name: str) -> int:
 
 def collect_candidates(
     db: Session,
+    org_id: int,
     window: int,
     marketplace: str | None = None,
     wh_id: int | None = None,
@@ -126,6 +131,7 @@ def collect_candidates(
 
     Args:
         db: Database session
+        org_id: Organization ID for scoping
         window: Planning window (14 or 28 days)
         marketplace: Filter by marketplace (optional)
         wh_id: Filter by warehouse (optional)
@@ -136,7 +142,7 @@ def collect_candidates(
     """
     settings = get_settings()
 
-    # Get all active SKU×Warehouse combinations from latest stock
+    # Get all active SKU×Warehouse combinations from latest stock (scoped to org)
     stmt = (
         select(
             DailyStock.sku_id,
@@ -152,6 +158,9 @@ def collect_candidates(
         .join(SKU, DailyStock.sku_id == SKU.id)
         .join(Warehouse, DailyStock.warehouse_id == Warehouse.id)
         .where(DailyStock.d == date.today())  # Latest snapshot
+        .where(DailyStock.org_id == org_id)
+        .where(SKU.org_id == org_id)
+        .where(Warehouse.org_id == org_id)
     )
 
     if marketplace:
@@ -171,18 +180,18 @@ def collect_candidates(
         article = row.article or f"{mkpl}_{sku_id}"
         wh_name = row.wh_name or "Unknown"
 
-        # Calculate SV
-        sv = rolling_sv(db, sku_id, warehouse_id, window)
+        # Calculate SV (scoped to org)
+        sv = rolling_sv(db, sku_id, warehouse_id, org_id, window)
 
         # Forecast = SV * window
         forecast = math.ceil(sv * window) if sv > 0 else 0
 
-        # Safety stock = COEFF * sqrt(window) * stdev
-        stdev = demand_stdev(db, sku_id, warehouse_id, window)
+        # Safety stock = COEFF * sqrt(window) * stdev (scoped to org)
+        stdev = demand_stdev(db, sku_id, warehouse_id, org_id, window)
         safety = math.ceil(settings.planner_safety_coeff * math.sqrt(window) * stdev)
 
-        # Get cost
-        unit_cost = get_current_cost(db, sku_id)
+        # Get cost (scoped to org)
+        unit_cost = get_current_cost(db, sku_id, org_id)
 
         # Get constraints from settings
         min_batch = settings.planner_min_batch

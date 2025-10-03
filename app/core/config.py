@@ -135,6 +135,56 @@ class Settings(BaseSettings):
     promo_max_window_days: int = Field(28, description="Maximum promo comparison window")
     pricing_explain_service_level: float = Field(0.88, description="Service level for explanations")
 
+    # === BI Export (Stage 15) ===
+    bi_export_max_rows: int = Field(100000, description="Maximum rows per BI export")
+    bi_export_default_limit: int = Field(5000, description="Default limit for BI exports")
+    bi_readonly_db_user: str = Field("bi_reader", description="Read-only DB user for BI tools")
+
+    # === Cashflow & PnL Pro (Stage 16) ===
+    cf_default_settlement_lag_days: int = Field(7, description="Payment lag from MP to seller")
+    cf_negative_balance_alert_threshold: int = Field(
+        -10000, description="Alert threshold for negative cash balance"
+    )
+    pnl_cost_fallback_strategy: str = Field(
+        "latest", description="Cost strategy: latest or moving_avg_28"
+    )
+    pnl_refunds_recognition: str = Field("post_event", description="Refund recognition method")
+    scenario_max_lookahead_days: int = Field(28, description="Max what-if scenario horizon")
+    scenario_price_step: int = Field(10, description="Price step for simulations")
+    scenario_supply_leadtime_days: int = Field(5, description="Average supply lead time")
+
+    # === Alerts & Playbooks (Stage 17) ===
+    alert_chat_ids: str = Field("", description="Comma-separated Telegram chat IDs for alerts")
+    alert_dedup_window_sec: int = Field(300, description="Alert deduplication window (seconds)")
+    alert_min_severity: str = Field("warning", description="Min severity: warning|error|critical")
+    slo_api_latency_p95_ms: int = Field(1200, description="SLO: API p95 latency (ms)")
+    slo_ingest_success_rate_pct: float = Field(99.0, description="SLO: Ingest success rate (%)")
+    slo_scheduler_on_time_pct: float = Field(98.0, description="SLO: Scheduler on-time (%)")
+    auto_remediation_enabled: bool = Field(True, description="Enable auto-remediation")
+    auto_remediation_max_retries: int = Field(3, description="Max remediation retries")
+
+    # === Reviews SLA (Stage 18) ===
+    sla_first_reply_hours: int = Field(24, description="SLA target: first reply within N hours")
+    sla_escalate_after_hours: int = Field(12, description="Escalate after N hours without reply")
+    sla_notify_chat_ids: str = Field("", description="Comma-separated chat IDs for SLA escalations")
+    sla_backlog_limit: int = Field(200, description="Maximum reviews in backlog check")
+    sla_batch_size: int = Field(30, description="Reviews per escalation message batch")
+
+    # === Multi-Tenant SaaS (Stage 19) ===
+    default_org_name: str = Field(
+        "SoVAni Default", description="Default organization name for new users"
+    )
+    tenant_enforcement_enabled: bool = Field(
+        True, description="Enforce org_id scoping on all queries"
+    )
+    org_export_default_limit: int = Field(5000, description="Default row limit for exports per org")
+    org_export_max_rows: int = Field(100000, description="Maximum export rows per org")
+    org_rate_limit_rps: int = Field(10, description="Max requests per second per organization")
+    org_max_jobs_enqueued: int = Field(50, description="Max concurrent jobs per organization")
+    org_tokens_encryption_key: str = Field(
+        "", description="Base64 encryption key for MP credentials"
+    )
+
 
 @lru_cache
 def get_settings() -> Settings:

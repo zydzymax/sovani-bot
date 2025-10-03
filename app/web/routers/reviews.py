@@ -9,7 +9,8 @@ from sqlalchemy import select, update
 
 from app.db.models import Review
 from app.services.reviews_service import build_reply_for_review
-from app.web.deps import CurrentUser, DBSession, require_admin
+from app.services.reviews_sla import update_first_reply_timestamp
+from app.web.deps import CurrentUser, DBSession, OrgScope, require_admin
 from app.web.schemas import ReplyRequest, ReviewDTO
 
 router = APIRouter()
@@ -17,6 +18,7 @@ router = APIRouter()
 
 @router.get("", response_model=list[ReviewDTO])
 def get_reviews(
+    org_id: OrgScope,
     db: DBSession,
     user: CurrentUser,
     status: str | None = Query(None, description="Filter by reply_status: pending|sent"),
@@ -36,7 +38,7 @@ def get_reviews(
     - rating: 1-5 stars
     - order: 'asc' or 'desc' by created_at_utc
     """
-    stmt = select(Review)
+    stmt = select(Review).where(Review.org_id == org_id)
 
     # Apply filters
     if status == "pending":
@@ -78,6 +80,7 @@ def get_reviews(
 @router.post("/{review_id}/draft")
 async def generate_reply_draft(
     review_id: str,
+    org_id: OrgScope,
     db: DBSession,
     user: CurrentUser,
 ) -> dict:
@@ -88,6 +91,7 @@ async def generate_reply_draft(
 
     Args:
         review_id: Review identifier
+        org_id: Organization ID (auto-injected)
         db: Database session
         user: Current user (authenticated)
 
@@ -99,8 +103,8 @@ async def generate_reply_draft(
         # Generate reply using Answer Engine
         draft_text = await build_reply_for_review(review_id, db)
 
-        # Get review for classification info
-        stmt = select(Review).where(Review.review_id == review_id)
+        # Get review for classification info (scoped to org)
+        stmt = select(Review).where(Review.review_id == review_id, Review.org_id == org_id)
         review = db.execute(stmt).scalar_one_or_none()
 
         if not review:
@@ -123,6 +127,7 @@ async def generate_reply_draft(
 def post_review_reply(
     review_id: str,
     payload: ReplyRequest,
+    org_id: OrgScope,
     db: DBSession,
     user: dict = Depends(require_admin),
 ) -> dict:
@@ -131,8 +136,8 @@ def post_review_reply(
     Marks review as 'sent' and stores reply text.
     Future: Will post to marketplace API when available.
     """
-    # Find review
-    stmt = select(Review).where(Review.review_id == review_id)
+    # Find review (scoped to org)
+    stmt = select(Review).where(Review.review_id == review_id, Review.org_id == org_id)
     review = db.execute(stmt).scalar_one_or_none()
 
     if not review:
@@ -141,7 +146,17 @@ def post_review_reply(
     if review.reply_status == "sent":
         raise HTTPException(status_code=400, detail="Review already replied")
 
+    # Determine reply_kind based on text characteristics
+    # If user provides custom text, it's likely edited/AI-assisted
+    # For now, we'll infer: if text matches common templates, mark as 'template', else 'ai'
+    reply_kind = "ai"  # Default assumption: custom/AI-assisted
+
+    # Simple heuristic: if text is very short (<50 chars), likely template
+    if len(payload.text) < 50:
+        reply_kind = "template"
+
     # Update review
+    now_utc = datetime.now(UTC)
     db.execute(
         update(Review)
         .where(Review.review_id == review_id)
@@ -149,10 +164,13 @@ def post_review_reply(
             reply_status="sent",
             reply_id="local",
             reply_text=payload.text,
-            replied_at_utc=datetime.now(UTC),
+            replied_at_utc=now_utc,
         )
     )
     db.commit()
+
+    # Track TTFR for SLA (Stage 18)
+    update_first_reply_timestamp(db, review.id, when=now_utc, reply_kind=reply_kind)
 
     # TODO: Post to WB/Ozon API when available
     # await post_reply_to_marketplace(review, payload.text)
