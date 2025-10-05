@@ -74,7 +74,7 @@ class Settings(BaseSettings):
     ozon_high_stock_days: int = Field(45, description="High stock coverage for Ozon in days")
 
     # === Application settings ===
-    app_timezone: str = Field("Europe/Moscow", description="Application timezone")
+    app_timezone: str = Field("Europe/Moscow", description="Application timezone", validation_alias="TZ")
     http_timeout_seconds: int = Field(30, description="HTTP request timeout in seconds")
 
     # === HTTP/Rate limits (per host) ===
@@ -171,6 +171,7 @@ class Settings(BaseSettings):
     sla_batch_size: int = Field(30, description="Reviews per escalation message batch")
 
     # === Multi-Tenant SaaS (Stage 19) ===
+    dev_mode: bool = Field(False, description="Enable development mode (DEV impersonation endpoints)")
     default_org_name: str = Field(
         "SoVAni Default", description="Default organization name for new users"
     )

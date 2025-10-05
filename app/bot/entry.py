@@ -35,10 +35,10 @@ from aiogram.types import (
 from aiogram.utils import executor
 from aiogram.utils.callback_data import CallbackData
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from cost_template_generator import CostTemplateGenerator
+from app.domain.finance.cost_template_generator import CostTemplateGenerator
 
 # ЗАМЕНЕНО НА РЕАЛЬНУЮ СИСТЕМУ ОТЧЕТНОСТИ БЕЗ ФЕЙКОВ!
-from real_data_reports import generate_cumulative_financial_report, generate_real_financial_report
+from app.domain.sales.real_data_reports import generate_cumulative_financial_report, generate_real_financial_report
 
 import http_async
 from ai_reply import generate_question_reply, generate_review_reply
@@ -195,43 +195,29 @@ def split_message(text):
 
 
 def get_main_menu():
-    """Создание главного меню Telegram бота
-
-    Главное меню содержит основные разделы функциональности:
-    - Отчеты по платформам (WB/Ozon раздельно)
-    - Управление данными (загрузка WB, себестоимость)
-    - Работа с отзывами (автоматизация через ChatGPT)
-    - Мониторинг системы (API статус)
+    """Создание главного меню Telegram бота с кнопкой Web App
 
     Returns:
-        ReplyKeyboardMarkup: Клавиатура главного меню
+        ReplyKeyboardMarkup: Клавиатура с кнопкой для запуска TMA
 
     """
-    print("[DEBUG] get_main_menu() вызвана! Создаю НОВОЕ меню с разделением WB/Ozon")
-    logging.info("get_main_menu() called - creating NEW menu with WB/Ozon separation")
+    from aiogram.types import WebAppInfo
 
-    keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
+    keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=1)
 
-    # Раздельные отчеты для WB и Ozon (основная функциональность)
+    # Кнопка для запуска Telegram Mini App (Web App)
+    web_app_button = KeyboardButton(
+        text="📊 Открыть SoVAni Analytics",
+        web_app=WebAppInfo(url="https://app.justbusiness.lol/")
+    )
+    keyboard.add(web_app_button)
+
+    # Дополнительные команды
     keyboard.add(
-        KeyboardButton("🟣 Отчеты WB"),  # Wildberries финансовые отчеты
-        KeyboardButton("🟠 Отчеты Ozon"),  # Ozon финансовые отчеты
+        KeyboardButton("🔍 API статус"),
+        KeyboardButton("📋 Помощь")
     )
 
-    # Управление данными
-    keyboard.add(
-        KeyboardButton("📋 Загрузка данных WB"),  # Excel импорт/экспорт для WB
-        KeyboardButton("💰 Себестоимость"),  # Управление COGS через Excel
-    )
-
-    # Автоматизация и мониторинг
-    keyboard.add(
-        KeyboardButton("⭐ Управление отзывами"),  # ChatGPT автоответы
-        KeyboardButton("🔍 API статус"),  # Проверка работоспособности API
-    )
-
-    # Справочная информация
-    keyboard.add(KeyboardButton("📋 Помощь"))
     return keyboard
 
 

@@ -40,7 +40,7 @@ def current_user(x_telegram_init_data: Annotated[str | None, Header()] = None) -
     settings = get_settings()
 
     # DEV_MODE bypass for local development
-    dev_mode = settings.timezone == "DEV_MODE"  # Hack: reuse timezone field
+    dev_mode = settings.app_timezone == "DEV_MODE"  # Hack: reuse timezone field
     if dev_mode:
         return {"id": "dev", "username": "developer", "role": "admin"}
 

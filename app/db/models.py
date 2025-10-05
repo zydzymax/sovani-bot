@@ -190,31 +190,35 @@ class Review(Base):
 
     __tablename__ = "reviews"
 
-    review_id: Mapped[str] = mapped_column(
+    id: Mapped[str] = mapped_column(
         String(64), primary_key=True
     )  # Уникальный ID отзыва от API
-    marketplace: Mapped[str] = mapped_column(String(10), index=True)  # "WB" | "OZON"
-    sku_id: Mapped[int | None] = mapped_column(
-        ForeignKey("sku.id", ondelete="SET NULL"), nullable=True
-    )
+    org_id: Mapped[int] = mapped_column(
+        ForeignKey("organizations.id", ondelete="CASCADE"), index=True
+    )  # Organization scope
+    sku: Mapped[str | None] = mapped_column(String, nullable=True)  # SKU артикул
 
     # Review details
-    created_at_utc: Mapped[datetime] = mapped_column(
-        DateTime(timezone=False), index=True
+    created_at_utc: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=False), index=True, nullable=True
     )  # Дата создания (UTC)
+    date: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=False), nullable=True
+    )  # Дата отзыва (legacy)
     rating: Mapped[int | None] = mapped_column(Integer, nullable=True)  # Оценка 1-5
     has_media: Mapped[bool] = mapped_column(Boolean, default=False)  # Есть ли фото/видео
     text: Mapped[str | None] = mapped_column(String, nullable=True)  # Текст отзыва
 
-    # Reply status
-    reply_status: Mapped[str | None] = mapped_column(
-        String(20), nullable=True
-    )  # "pending" | "sent" | "failed"
-    reply_id: Mapped[str | None] = mapped_column(String(64), nullable=True)  # ID ответа (если есть)
+    # Reply status (legacy fields from old schema)
+    answer: Mapped[str | None] = mapped_column(String, nullable=True)  # Ответ (legacy)
+    answered: Mapped[bool | None] = mapped_column(Boolean, nullable=True)  # Отвечен ли (legacy)
     reply_text: Mapped[str | None] = mapped_column(String, nullable=True)  # Текст ответа
-    replied_at_utc: Mapped[datetime | None] = mapped_column(
+    first_reply_at_utc: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=False), nullable=True
     )  # Дата ответа (UTC)
+    reply_kind: Mapped[str | None] = mapped_column(
+        String(10), nullable=True
+    )  # Тип ответа (legacy)
 
 
 class Cashflow(Base):

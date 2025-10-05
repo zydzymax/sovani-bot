@@ -10,8 +10,9 @@ from datetime import datetime as dt
 
 from aiogram import types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, InputFile
-from cost_data_processor import cost_processor
+# from cost_data_processor import cost_processor  # Module not found - disabled
 from real_data_reports import generate_cumulative_financial_report, generate_real_financial_report
+cost_processor = None  # Stub for compatibility
 
 from excel_report_generator import excel_generator
 from staged_processor import staged_processor

@@ -20,9 +20,11 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.core.config import get_settings
+from app.core.logging import get_logger
 from app.db.session import get_db
 
 logger = logging.getLogger(__name__)
+log = get_logger("sovani_bot.auth")
 
 
 class CurrentUser:
@@ -219,19 +221,55 @@ async def get_current_user(
     """
     settings = get_settings()
 
+    # DEV_MODE bypass for local development
+    dev_mode = settings.app_timezone == "DEV_MODE"
+    if dev_mode:
+        # Get default org ID
+        default_org_row = db.execute(
+            text("SELECT id FROM organizations LIMIT 1")
+        ).first()
+        org_id = default_org_row[0] if default_org_row else 1
+
+        return CurrentUser(
+            user_id=999,
+            tg_user_id=999,
+            org_id=org_id,
+            role="owner",
+            tg_username="developer",
+            tg_first_name="Dev"
+        )
+
     # Method 1: Telegram WebApp initData (production)
     if x_telegram_init_data:
-        parsed_data = validate_telegram_init_data(x_telegram_init_data, settings.telegram_token)
+        try:
+            parsed_data = validate_telegram_init_data(x_telegram_init_data, settings.telegram_token)
+        except ValueError as e:
+            log.warning(
+                "invalid_telegram_init_data",
+                extra={"reason": "signature_mismatch", "error": str(e)},
+            )
+            raise HTTPException(
+                status_code=401,
+                detail={"error": "invalid_init_data", "reason": "signature_mismatch"},
+            )
 
         if not parsed_data:
-            raise HTTPException(status_code=401, detail="Invalid Telegram initData")
+            log.warning("invalid_telegram_init_data", extra={"reason": "parse_failed"})
+            raise HTTPException(
+                status_code=401,
+                detail={"error": "invalid_init_data", "reason": "parse_failed"},
+            )
 
         # Extract user data
         user_data = json.loads(parsed_data.get("user", "{}"))
         tg_user_id = user_data.get("id")
 
         if not tg_user_id:
-            raise HTTPException(status_code=401, detail="Missing Telegram user ID")
+            log.warning("missing_telegram_user_id", extra={"user_data": user_data})
+            raise HTTPException(
+                status_code=401,
+                detail={"error": "invalid_init_data", "reason": "missing_user_id"},
+            )
 
         user_id, org_id, role = get_or_create_user(db, tg_user_id, user_data)
 

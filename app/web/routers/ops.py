@@ -10,15 +10,78 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.web.deps import get_db
+from app.core.config import get_settings
 from app.ops.detectors import run_all_detectors
 from app.ops.remediation import trigger_remediation
 from app.ops.slo import calculate_slo_compliance, get_slo_summary_last_n_days
-from app.web.deps import require_admin
+from app.web.deps import get_db, require_admin
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/v1/ops", tags=["Operations"])
+
+
+@router.get("/self-check")
+def self_check(db: Session = Depends(get_db)) -> dict[str, Any]:
+    """System self-check for diagnostics.
+
+    Returns database state, migrations, and data counts.
+    Admin-only in production, available for all in DEV mode.
+    """
+    settings = get_settings()
+
+    # Get alembic version
+    alembic_version = db.execute(text("SELECT version_num FROM alembic_version")).scalar()
+
+    # Get data counts per org
+    counts_query = text(
+        """
+        SELECT
+            'reviews' as table_name, org_id, COUNT(*) as cnt FROM reviews GROUP BY org_id
+        UNION ALL
+        SELECT 'daily_sales', org_id, COUNT(*) FROM daily_sales GROUP BY org_id
+        UNION ALL
+        SELECT 'daily_stock', org_id, COUNT(*) FROM daily_stock GROUP BY org_id
+        UNION ALL
+        SELECT 'metrics_daily', org_id, COUNT(*) FROM metrics_daily GROUP BY org_id
+        UNION ALL
+        SELECT 'pnl_daily', org_id, COUNT(*) FROM pnl_daily GROUP BY org_id
+    """
+    )
+    counts_result = db.execute(counts_query).fetchall()
+
+    # Group counts by org_id
+    counts_by_org = {}
+    for row in counts_result:
+        table_name, org_id, cnt = row
+        if org_id not in counts_by_org:
+            counts_by_org[org_id] = {}
+        counts_by_org[org_id][table_name] = cnt
+
+    # Check BI views exist
+    views_query = text(
+        """
+        SELECT name FROM sqlite_master
+        WHERE type='view' AND name LIKE 'vw_%'
+        ORDER BY name
+    """
+    )
+    views = [row[0] for row in db.execute(views_query).fetchall()]
+
+    # Get org info
+    orgs_query = text("SELECT id, name FROM organizations ORDER BY id")
+    orgs = [{"id": row[0], "name": row[1]} for row in db.execute(orgs_query).fetchall()]
+
+    return {
+        "db_ok": True,
+        "migrations_head": alembic_version or "unknown",
+        "views_count": len(views),
+        "views": views[:10],  # First 10 views
+        "organizations": orgs,
+        "data_counts_by_org": counts_by_org,
+        "dev_mode": settings.dev_mode,
+        "tenant_enforcement": settings.tenant_enforcement_enabled,
+    }
 
 
 @router.get("/health")

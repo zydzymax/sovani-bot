@@ -186,25 +186,22 @@ def export_reviews_csv(
     stmt = select(Review).where(Review.org_id == org_id).order_by(Review.created_at_utc.desc())
 
     if status == "pending":
-        stmt = stmt.where(Review.reply_status.is_(None))
+        stmt = stmt.where(Review.answer.is_(None))
     elif status == "sent":
-        stmt = stmt.where(Review.reply_status == "sent")
-
-    if marketplace:
-        stmt = stmt.where(Review.marketplace == marketplace)
+        stmt = stmt.where(Review.answered == True)
 
     stmt = stmt.limit(limit)
     results = db.execute(stmt).scalars().all()
 
     data = [
         {
-            "review_id": r.review_id,
-            "marketplace": r.marketplace,
-            "sku_key": r.sku_key,
+            "review_id": r.id,
+            "marketplace": "WB",  # Default since old schema doesn't have this field
+            "sku_key": r.sku,
             "rating": r.rating,
             "text": r.text,
-            "created_at": r.created_at_utc.isoformat() if r.created_at_utc else None,
-            "reply_status": r.reply_status,
+            "created_at": r.created_at_utc.isoformat() if r.created_at_utc else (r.date.isoformat() if r.date else None),
+            "reply_status": "sent" if r.answered else None,
             "reply_text": r.reply_text,
         }
         for r in results

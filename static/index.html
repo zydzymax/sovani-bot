@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>SoVAni - Аналитика продавца</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--tg-theme-bg-color, #ffffff);
+            color: var(--tg-theme-text-color, #000000);
+            padding: 16px;
+            padding-bottom: 80px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .header p {
+            color: var(--tg-theme-hint-color, #999999);
+            font-size: 14px;
+        }
+
+        .status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 12px;
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        .status-icon {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #4CAF50;
+        }
+
+        .card {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .card:active {
+            opacity: 0.7;
+        }
+
+        .card h3 {
+            font-size: 16px;
+            margin-bottom: 8px;
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .card p {
+            font-size: 14px;
+            color: var(--tg-theme-hint-color, #666666);
+            line-height: 1.5;
+        }
+
+        .button {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: var(--tg-theme-button-color, #0088cc);
+            color: var(--tg-theme-button-text-color, #ffffff);
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 8px;
+            transition: opacity 0.2s;
+        }
+
+        .button:active {
+            opacity: 0.8;
+        }
+
+        .button.secondary {
+            background: var(--tg-theme-secondary-bg-color, #f0f0f0);
+            color: var(--tg-theme-text-color, #000000);
+        }
+
+        .info {
+            font-size: 12px;
+            color: var(--tg-theme-hint-color, #999999);
+            padding: 12px;
+            background: var(--tg-theme-secondary-bg-color, #f9f9f9);
+            border-radius: 8px;
+            margin-top: 24px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: var(--tg-theme-bg-color, #ffffff);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 500px;
+            margin: 50px auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .close-btn {
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--tg-theme-hint-color, #999999);
+        }
+
+        .modal-body {
+            margin-bottom: 16px;
+        }
+
+        .data-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
+        }
+
+        .data-label {
+            color: var(--tg-theme-hint-color, #666666);
+        }
+
+        .data-value {
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 SoVAni Analytics</h1>
+            <p>Аналитика продаж на маркетплейсах</p>
+        </div>
+
+        <div class="status">
+            <div class="status-icon"></div>
+            <span id="statusText">Подключение к серверу...</span>
+        </div>
+
+        <div class="card" onclick="openDashboard()">
+            <h3>📊 Дашборд</h3>
+            <p>Основные метрики и KPI</p>
+        </div>
+
+        <div class="card" onclick="openReviews()">
+            <h3>⭐ Отзывы и вопросы</h3>
+            <p>Обработка отзывов с AI</p>
+        </div>
+
+        <div class="card" onclick="openInventory()">
+            <h3>📦 Складские остатки</h3>
+            <p>Мониторинг товаров на складах</p>
+        </div>
+
+        <div class="card" onclick="openFinance()">
+            <h3>💰 Финансы</h3>
+            <p>P&L, выручка, ROI</p>
+        </div>
+
+        <button class="button" onclick="refreshData()">🔄 Обновить данные</button>
+
+        <div class="info">
+            <div id="userInfo">Загрузка информации о пользователе...</div>
+            <div id="apiInfo" style="margin-top: 8px;">API: Проверка...</div>
+        </div>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal" onclick="closeModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">Загрузка...</div>
+                <span class="close-btn" onclick="closeModal()">&times;</span>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <div class="loading">Загрузка данных...</div>
+            </div>
+            <button class="button secondary" onclick="closeModal()">Закрыть</button>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        // Get user info
+        const user = tg.initDataUnsafe?.user;
+        const initData = tg.initData;
+
+        // Display user info
+        if (user) {
+            document.getElementById('userInfo').innerHTML =
+                `👤 ${user.first_name || ''} ${user.last_name || ''}<br>` +
+                `🆔 ID: ${user.id}`;
+        } else {
+            document.getElementById('userInfo').textContent = '⚠️ Откройте через Telegram бота для авторизации';
+        }
+
+        // Check API connection
+        async function checkStatus() {
+            const statusText = document.getElementById('statusText');
+            const apiInfo = document.getElementById('apiInfo');
+
+            try {
+                const response = await fetch('/health');
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                statusText.textContent = '✅ Сервер работает';
+                apiInfo.innerHTML = `✅ API: ${data.status || 'healthy'}`;
+            } catch (error) {
+                statusText.textContent = '❌ Ошибка подключения';
+                apiInfo.textContent = `❌ ${error.message}`;
+            }
+        }
+
+        // Open dashboard
+        async function openDashboard() {
+            showModal('📊 Дашборд', '<div class="loading">Загрузка метрик...</div>');
+
+            try {
+                const headers = initData ? {'X-Telegram-Init-Data': initData} : {};
+                // Get last 30 days
+                const dateTo = new Date().toISOString().split('T')[0];
+                const dateFrom = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+                const response = await fetch(`/api/v1/dashboard/summary?date_from=${dateFrom}&date_to=${dateTo}`, {headers});
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                let html = '<div>';
+                html += `<div class="data-row"><span class="data-label">Выручка:</span><span class="data-value">${Math.round(data.revenue_net || 0)} ₽</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Прибыль:</span><span class="data-value">${Math.round(data.profit || 0)} ₽</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Маржа:</span><span class="data-value">${Math.round(data.margin || 0)}%</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Продано:</span><span class="data-value">${data.units || 0} шт</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Возвраты:</span><span class="data-value">${data.refunds_qty || 0} шт</span></div>`;
+                html += '</div>';
+
+                document.getElementById('modalBody').innerHTML = html;
+            } catch (error) {
+                document.getElementById('modalBody').innerHTML =
+                    `<p style="color: #f44336;">❌ Ошибка: ${error.message}</p>` +
+                    `<p style="color: #999; font-size: 12px; margin-top: 8px;">Откройте приложение через Telegram бота для авторизации</p>`;
+            }
+        }
+
+        // Open reviews
+        async function openReviews() {
+            showModal('⭐ Отзывы', '<div class="loading">Загрузка отзывов...</div>');
+
+            try {
+                const headers = initData ? {'X-Telegram-Init-Data': initData} : {};
+                const response = await fetch('/api/v1/reviews?limit=10', {headers});
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                let html = '<div>';
+                if (data && data.length > 0) {
+                    data.forEach(review => {
+                        html += `<div class="data-row">`;
+                        html += `<span class="data-label">⭐ ${review.rating || '?'}/5</span>`;
+                        html += `<span class="data-value">${(review.text || 'Без текста').substring(0, 30)}...</span>`;
+                        html += `</div>`;
+                    });
+                } else {
+                    html += '<p>Отзывов пока нет</p>';
+                }
+                html += '</div>';
+
+                document.getElementById('modalBody').innerHTML = html;
+            } catch (error) {
+                document.getElementById('modalBody').innerHTML =
+                    `<p style="color: #f44336;">❌ ${error.message}</p>` +
+                    `<p style="color: #999; font-size: 12px; margin-top: 8px;">Требуется авторизация через Telegram</p>`;
+            }
+        }
+
+        // Open inventory
+        async function openInventory() {
+            showModal('📦 Остатки', '<div class="loading">Загрузка остатков...</div>');
+
+            try {
+                const headers = initData ? {'X-Telegram-Init-Data': initData} : {};
+                const today = new Date().toISOString().split('T')[0];
+                const response = await fetch(`/api/v1/inventory/stocks?date=${today}&limit=20`, {headers});
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                let html = '<div>';
+                if (data && data.length > 0) {
+                    data.forEach(item => {
+                        html += `<div class="data-row">`;
+                        html += `<span class="data-label">${item.sku_key || 'SKU'}</span>`;
+                        html += `<span class="data-value">${item.total || 0} шт</span>`;
+                        html += `</div>`;
+                    });
+                } else {
+                    html += '<p>Данных нет</p>';
+                }
+                html += '</div>';
+
+                document.getElementById('modalBody').innerHTML = html;
+            } catch (error) {
+                document.getElementById('modalBody').innerHTML =
+                    `<p style="color: #f44336;">❌ ${error.message}</p>`;
+            }
+        }
+
+        // Open finance
+        async function openFinance() {
+            showModal('💰 Финансы', '<div class="loading">Загрузка финансов...</div>');
+
+            try {
+                const headers = initData ? {'X-Telegram-Init-Data': initData} : {};
+                const dateTo = new Date().toISOString().split('T')[0];
+                const dateFrom = new Date(Date.now() - 30*24*60*60*1000).toISOString().split('T')[0];
+                const response = await fetch(`/api/v1/dashboard/summary?date_from=${dateFrom}&date_to=${dateTo}`, {headers});
+
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const data = await response.json();
+
+                let html = '<div>';
+                html += `<div class="data-row"><span class="data-label">Выручка:</span><span class="data-value">${Math.round(data.revenue_net || 0)} ₽</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Прибыль:</span><span class="data-value">${Math.round(data.profit || 0)} ₽</span></div>`;
+                html += `<div class="data-row"><span class="data-label">Маржа:</span><span class="data-value">${Math.round(data.margin || 0)}%</span></div>`;
+                html += '</div>';
+
+                document.getElementById('modalBody').innerHTML = html;
+            } catch (error) {
+                document.getElementById('modalBody').innerHTML =
+                    `<p style="color: #f44336;">❌ ${error.message}</p>`;
+            }
+        }
+
+        // Refresh data
+        function refreshData() {
+            checkStatus();
+            if (tg.initDataUnsafe?.user) {
+                try {
+                    tg.showAlert('✅ Данные обновлены!');
+                } catch (e) {
+                    console.log('Alert not supported');
+                }
+            }
+        }
+
+        // Modal functions
+        function showModal(title, body) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalBody').innerHTML = body;
+            document.getElementById('modal').style.display = 'block';
+        }
+
+        function closeModal(event) {
+            if (!event || event.target.id === 'modal') {
+                document.getElementById('modal').style.display = 'none';
+            }
+        }
+
+        // Auto-check on load
+        setTimeout(checkStatus, 500);
+
+        // Set theme colors
+        document.body.style.setProperty('--tg-theme-bg-color', tg.themeParams.bg_color || '#ffffff');
+        document.body.style.setProperty('--tg-theme-text-color', tg.themeParams.text_color || '#000000');
+        document.body.style.setProperty('--tg-theme-hint-color', tg.themeParams.hint_color || '#999999');
+        document.body.style.setProperty('--tg-theme-button-color', tg.themeParams.button_color || '#0088cc');
+        document.body.style.setProperty('--tg-theme-button-text-color', tg.themeParams.button_text_color || '#ffffff');
+    </script>
+</body>
+</html>

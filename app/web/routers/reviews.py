@@ -42,12 +42,9 @@ def get_reviews(
 
     # Apply filters
     if status == "pending":
-        stmt = stmt.where(Review.reply_status.is_(None))
+        stmt = stmt.where(Review.answer.is_(None))
     elif status == "sent":
-        stmt = stmt.where(Review.reply_status == "sent")
-
-    if marketplace:
-        stmt = stmt.where(Review.marketplace == marketplace)
+        stmt = stmt.where(Review.answered == True)
 
     if rating is not None:
         stmt = stmt.where(Review.rating == rating)
@@ -64,13 +61,13 @@ def get_reviews(
 
     return [
         ReviewDTO(
-            review_id=r.review_id,
-            marketplace=r.marketplace,
-            sku_key=str(r.sku_id) if r.sku_id else None,
+            review_id=r.id,
+            marketplace="WB",  # Default since old schema doesn't have this field
+            sku_key=r.sku,
             rating=r.rating,
             text=r.text,
-            created_at_utc=r.created_at_utc.isoformat() if r.created_at_utc else None,
-            reply_status=r.reply_status,
+            created_at_utc=r.created_at_utc.isoformat() if r.created_at_utc else (r.date.isoformat() if r.date else None),
+            reply_status="sent" if r.answered else None,
             reply_text=r.reply_text,
         )
         for r in results
@@ -104,7 +101,7 @@ async def generate_reply_draft(
         draft_text = await build_reply_for_review(review_id, db)
 
         # Get review for classification info (scoped to org)
-        stmt = select(Review).where(Review.review_id == review_id, Review.org_id == org_id)
+        stmt = select(Review).where(Review.id == review_id, Review.org_id == org_id)
         review = db.execute(stmt).scalar_one_or_none()
 
         if not review:
@@ -137,13 +134,13 @@ def post_review_reply(
     Future: Will post to marketplace API when available.
     """
     # Find review (scoped to org)
-    stmt = select(Review).where(Review.review_id == review_id, Review.org_id == org_id)
+    stmt = select(Review).where(Review.id == review_id, Review.org_id == org_id)
     review = db.execute(stmt).scalar_one_or_none()
 
     if not review:
         raise HTTPException(status_code=404, detail="Review not found")
 
-    if review.reply_status == "sent":
+    if review.answered:
         raise HTTPException(status_code=400, detail="Review already replied")
 
     # Determine reply_kind based on text characteristics
@@ -159,12 +156,13 @@ def post_review_reply(
     now_utc = datetime.now(timezone.utc)
     db.execute(
         update(Review)
-        .where(Review.review_id == review_id)
+        .where(Review.id == review_id)
         .values(
-            reply_status="sent",
-            reply_id="local",
+            answered=True,
+            answer=payload.text,
             reply_text=payload.text,
-            replied_at_utc=now_utc,
+            first_reply_at_utc=now_utc,
+            reply_kind=reply_kind,
         )
     )
     db.commit()
