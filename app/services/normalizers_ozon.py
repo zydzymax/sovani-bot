@@ -8,7 +8,7 @@ All dates converted to UTC.
 
 from __future__ import annotations
 
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 
 def norm_transactions(resp: dict) -> list[dict]:
@@ -71,7 +71,24 @@ def norm_transactions(resp: dict) -> list[dict]:
 def norm_stocks(resp: dict) -> list[dict]:
     """Normalize Ozon warehouse/stock API response.
 
-    Input structure:
+    Input structure (v2/analytics/stock_on_warehouses FBO):
+    {
+        "result": {
+            "rows": [
+                {
+                    "sku": 1483568647,
+                    "warehouse_name": "НОГИНСК_РФЦ",
+                    "item_code": "PM-TOP/ecru-S",
+                    "item_name": "Пижама SoVAni",
+                    "free_to_sell_amount": 21,
+                    "promised_amount": 0,
+                    "reserved_amount": 0
+                }
+            ]
+        }
+    }
+
+    Legacy format (v3/product/info/stocks FBS):
     {
         "result": {
             "rows": [
@@ -93,21 +110,29 @@ def norm_stocks(resp: dict) -> list[dict]:
     - on_hand (int), in_transit (int)
     """
     out = []
-    snapshot_date = datetime.now(timezone.utc).date()
+    snapshot_date = datetime.now(UTC).date()
 
     rows = resp.get("result", {}).get("rows", [])
 
     for r in rows:
-        # SKU identifier (Ozon uses offer_id or product_id)
-        sku_key = str(r.get("offer_id") or r.get("product_id") or "")
+        # SKU identifier (new FBO API uses "sku", old FBS uses "offer_id" or "product_id")
+        sku_key = str(r.get("sku") or r.get("offer_id") or r.get("product_id") or "")
         if not sku_key:
             continue
 
         # Warehouse
         warehouse = r.get("warehouse_name") or ""
 
-        # Stock quantities
-        on_hand = int(r.get("free_to_sell_amount") or r.get("present") or 0)
+        # Stock quantities (FBO uses free_to_sell_amount + promised_amount as total on_hand)
+        free_to_sell = int(r.get("free_to_sell_amount") or r.get("present") or 0)
+        promised = int(r.get("promised_amount") or 0)
+        reserved = int(r.get("reserved_amount") or 0)
+
+        # For FBO: on_hand = free + promised + reserved (total inventory)
+        # For FBS: on_hand = free_to_sell_amount
+        on_hand = free_to_sell + promised + reserved
+
+        # In transit (only in old FBS API)
         in_transit = int(r.get("in_way_to_client") or 0) + int(r.get("in_way_from_client") or 0)
 
         out.append(

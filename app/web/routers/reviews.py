@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import timezone, datetime
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, update
@@ -66,7 +66,11 @@ def get_reviews(
             sku_key=r.sku,
             rating=r.rating,
             text=r.text,
-            created_at_utc=r.created_at_utc.isoformat() if r.created_at_utc else (r.date.isoformat() if r.date else None),
+            created_at_utc=(
+                r.created_at_utc.isoformat()
+                if r.created_at_utc
+                else (r.date.isoformat() if r.date else None)
+            ),
             reply_status="sent" if r.answered else None,
             reply_text=r.reply_text,
         )
@@ -98,7 +102,7 @@ async def generate_reply_draft(
     """
     try:
         # Generate reply using Answer Engine
-        draft_text = await build_reply_for_review(review_id, db)
+        draft_text = await build_reply_for_review(db, org_id=org_id, review_id=review_id)
 
         # Get review for classification info (scoped to org)
         stmt = select(Review).where(Review.id == review_id, Review.org_id == org_id)
@@ -153,7 +157,7 @@ def post_review_reply(
         reply_kind = "template"
 
     # Update review
-    now_utc = datetime.now(timezone.utc)
+    now_utc = datetime.now(UTC)
     db.execute(
         update(Review)
         .where(Review.id == review_id)

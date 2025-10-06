@@ -8,7 +8,7 @@ All dates converted to UTC.
 
 from __future__ import annotations
 
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 
 def norm_sales(rows: list[dict]) -> list[dict]:
@@ -42,7 +42,9 @@ def norm_sales(rows: list[dict]) -> list[dict]:
         warehouse = r.get("warehouseName") or r.get("warehouse") or ""
 
         # Quantities
-        qty = int(r.get("quantity") or r.get("saleQty") or 0)
+        # WB sales API: each record = 1 sale (no quantity field, each row is 1 unit sold)
+        # Returns may have returnQty field
+        qty = int(r.get("quantity") or r.get("saleQty") or 1)  # Default to 1 if no quantity field
         ret_qty = int(r.get("returnQty") or 0)
 
         # Revenue (WB uses different fields)
@@ -88,7 +90,7 @@ def norm_stocks(rows: list[dict]) -> list[dict]:
     - on_hand (int), in_transit (int)
     """
     out = []
-    snapshot_date = datetime.now(timezone.utc).date()  # Current UTC date
+    snapshot_date = datetime.now(UTC).date()  # Current UTC date
 
     for r in rows:
         # SKU identifier
@@ -140,9 +142,9 @@ def norm_feedbacks(rows: list[dict]) -> list[dict]:
         created = r.get("createdDate") or r.get("createdAt") or ""
         if created:
             dt = datetime.fromisoformat(created.replace("Z", "+00:00"))
-            created_at_utc = dt.replace(tzinfo=timezone.utc)
+            created_at_utc = dt.replace(tzinfo=UTC)
         else:
-            created_at_utc = datetime.now(timezone.utc)
+            created_at_utc = datetime.now(UTC)
 
         # SKU
         sku_key = str(r.get("nmId") or r.get("nmid") or "")

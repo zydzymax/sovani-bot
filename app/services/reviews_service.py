@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import timezone, datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import select, update
 from sqlalchemy.orm import Session
@@ -62,7 +62,7 @@ async def build_reply_for_review(db: Session, *, org_id: int, review_id: str) ->
 
     """
     # 1. Fetch review (scoped to org)
-    stmt = select(Review).where(Review.review_id == review_id, Review.org_id == org_id)
+    stmt = select(Review).where(Review.id == review_id, Review.org_id == org_id)
     review = db.execute(stmt).scalar_one_or_none()
 
     if not review:
@@ -83,8 +83,8 @@ async def build_reply_for_review(db: Session, *, org_id: int, review_id: str) ->
         f"(rating={rating}, text_len={len(text)}, has_media={has_media})"
     )
 
-    # Track classification metrics
-    marketplace = review.marketplace or "unknown"
+    # Track classification metrics (marketplace field doesn't exist in DB, use WB as default)
+    marketplace = "WB"  # Default to WB since old reviews don't have marketplace field
     reviews_classified_total.labels(
         marketplace=marketplace,
         classification=classification,
@@ -137,7 +137,8 @@ async def generate_reply_for_review(review: Review) -> str:
 
     db = SessionLocal()
     try:
-        return await build_reply_for_review(review.review_id, db)
+        # Assume org_id=1 for legacy compatibility (should be passed from caller)
+        return await build_reply_for_review(db, org_id=review.org_id, review_id=review.id)
     finally:
         db.close()
 
@@ -153,12 +154,11 @@ async def mark_reply_sent(db: Session, review_id: str, reply_text: str) -> None:
     """
     db.execute(
         update(Review)
-        .where(Review.review_id == review_id)
+        .where(Review.id == review_id)
         .values(
-            reply_status="sent",
-            reply_id="local",
-            replied_at_utc=datetime.now(timezone.utc),
-            reply_text=reply_text,
+            answered=True,  # Mark as replied
+            reply_text=reply_text,  # Store reply text
+            first_reply_at_utc=datetime.now(UTC),  # Track reply timestamp
         )
     )
     db.commit()

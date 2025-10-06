@@ -333,11 +333,12 @@ async def collect_ozon_stocks_now(db: Session) -> int:
     log.info("ozon_stocks_collection_started", extra={"date": str(today)})
 
     try:
-        page = 1
+        offset = 0
+        limit = 1000
         total_upserts = 0
 
         while True:
-            response = await client.stocks(page=page, page_size=1000)
+            response = await client.stocks(limit=limit, offset=offset)
 
             rows_data = response.get("result", {}).get("rows", [])
             if not rows_data:
@@ -347,7 +348,12 @@ async def collect_ozon_stocks_now(db: Session) -> int:
 
             for row in rows:
                 sku_id = ensure_sku(db, "OZON", ozon_id=row["sku_key"])
-                wh_id = ensure_warehouse(db, "OZON", row["warehouse"]) if row["warehouse"] else None
+                # Use warehouse name as both code and name for Ozon FBO
+                wh_id = (
+                    ensure_warehouse(db, "OZON", code=row["warehouse"], name=row["warehouse"])
+                    if row["warehouse"]
+                    else None
+                )
 
                 payload = {
                     "d": str(row["d"]),
@@ -391,12 +397,11 @@ async def collect_ozon_stocks_now(db: Session) -> int:
                     db.execute(stmt)
                     total_upserts += 1
 
-            # Check pagination
-            has_next = response.get("result", {}).get("has_next", False)
-            if not has_next:
+            # Check if we got full page (if less than limit, we're done)
+            if len(rows_data) < limit:
                 break
 
-            page += 1
+            offset += limit
 
         db.commit()
 

@@ -35,14 +35,22 @@ async def main():
             wb_stocks_count = await collect_wb_stocks_now(db)
             log.info(f"Collected {wb_stocks_count} WB stock records")
 
-            # Collect Ozon data
-            log.info("Collecting Ozon transactions...")
-            ozon_txn_count = await collect_ozon_transactions_range(db, d_from, d_to)
-            log.info(f"Collected {ozon_txn_count} Ozon transaction records")
+            # Collect Ozon data (best-effort, may fail if no products)
+            try:
+                log.info("Collecting Ozon transactions...")
+                ozon_txn_count = await collect_ozon_transactions_range(db, d_from, d_to)
+                log.info(f"Collected {ozon_txn_count} Ozon transaction records")
+            except Exception as e:
+                log.warning(f"Ozon transactions collection failed: {e}")
+                ozon_txn_count = 0
 
-            log.info("Collecting Ozon stocks...")
-            ozon_stocks_count = await collect_ozon_stocks_now(db)
-            log.info(f"Collected {ozon_stocks_count} Ozon stock records")
+            try:
+                log.info("Collecting Ozon stocks...")
+                ozon_stocks_count = await collect_ozon_stocks_now(db)
+                log.info(f"Collected {ozon_stocks_count} Ozon stock records")
+            except Exception as e:
+                log.warning(f"Ozon stocks collection failed: {e}")
+                ozon_stocks_count = 0
 
             db.commit()
             log.info("Data collection completed successfully!")

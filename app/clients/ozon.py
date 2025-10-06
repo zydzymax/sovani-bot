@@ -66,28 +66,35 @@ class OzonClient:
         return await self.http.json("POST", "/v3/finance/transaction/list", json_body=body)
 
     async def stocks(
-        self, page: int = 1, page_size: int = 1000, filter_dict: dict | None = None
+        self, limit: int = 1000, offset: int = 0, warehouse_type: str = "ALL"
     ) -> dict[str, Any]:
-        """Get warehouse stocks from Ozon.
+        """Get warehouse stocks from Ozon (FBO/FBS).
 
-        Endpoint: /v2/warehouse/stock (or /v3/product/info/stocks)
-        Docs: https://docs.ozon.ru/api/seller/#operation/ProductAPI_GetProductInfoStocksV3
+        Endpoint: /v2/analytics/stock_on_warehouses
+        Docs: https://docs.ozon.ru/api/seller/#operation/AnalyticsAPI_AnalyticsStockOnWarehouses
 
         Args:
-            page: Page number (1-indexed)
-            page_size: Items per page (max 1000)
-            filter_dict: Optional filter (offer_id, product_id, visibility, etc.)
+            limit: Items per page (max 1000)
+            offset: Offset for pagination
+            warehouse_type: Warehouse type filter (ALL, FBO, FBS, CROSSBORDER)
 
         Returns:
-            Stock data with rows list
+            Stock data with rows list containing:
+            - sku: Ozon SKU ID
+            - warehouse_name: Warehouse name
+            - item_code: Seller's article
+            - item_name: Product name
+            - free_to_sell_amount: Available quantity
+            - promised_amount: Reserved for shipment
+            - reserved_amount: Reserved in orders
 
         """
         body = {
-            "filter": filter_dict or {},
-            "page": page,
-            "page_size": page_size,
+            "limit": limit,
+            "offset": offset,
+            "warehouse_type": warehouse_type,
         }
-        return await self.http.json("POST", "/v3/product/info/stocks", json_body=body)
+        return await self.http.json("POST", "/v2/analytics/stock_on_warehouses", json_body=body)
 
     async def finance_transactions(
         self, date_from: str, date_to: str, page: int = 1, page_size: int = 100
